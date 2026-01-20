@@ -1,0 +1,42 @@
+═══════════════════════════════════════════════════════════
+   EDUBRIDGE SCHOOL MANAGEMENT SYSTEM - QUICK START
+═══════════════════════════════════════════════════════════
+
+📖 Read SETUP.md for detailed instructions
+
+🚀 QUICK START (3 commands):
+
+1. Configure MySQL:
+   - Edit backend/.env
+   - Set your DB_PASSWORD
+
+2. Setup Database:
+   cd backend
+   npm install
+   npm run setup
+
+3. Start Application:
+   
+   Terminal 1 (Backend):
+   cd backend
+   npm run dev
+   
+   Terminal 2 (Frontend):
+   cd frontend
+   npm install
+   npm run dev
+
+4. Open: http://localhost:3000
+   Login: admin@edubridge.com / password123
+
+═══════════════════════════════════════════════════════════
+
+⚠️  REQUIREMENTS:
+   - Node.js v18+
+   - MySQL 8.0+ (must be running)
+
+💡 HELP:
+   - Read SETUP.md for troubleshooting
+   - Read README.md for features & API docs
+
+═══════════════════════════════════════════════════════════
