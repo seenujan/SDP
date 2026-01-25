@@ -30,6 +30,8 @@ import StudentPortfolio from './pages/teacher/StudentPortfolio';
 import ExamSubmissions from './pages/teacher/ExamSubmissions';
 import ReviewStudentExam from './pages/teacher/ReviewStudentExam';
 import PTMBooking from './pages/teacher/PTMBooking';
+import TeacherAnnouncements from './pages/teacher/Announcements';
+import TeacherEvents from './pages/teacher/Events';
 
 // Student
 import StudentDashboard from './pages/student/Dashboard';
@@ -53,10 +55,12 @@ import ParentEvents from './pages/parent/Events';
 import ChildPortfolio from './pages/parent/ChildPortfolio';
 import ViewProgress from './pages/parent/ViewProgress';
 import ParentAttendance from './pages/parent/Attendance';
+import ParentPTMBooking from './pages/parent/PTMBooking';
 
 // Common
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
+import Notifications from './pages/Notifications';
 
 function App() {
     return (
@@ -255,6 +259,22 @@ function App() {
                         }
                     />
                     <Route
+                        path="/teacher/announcements"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <TeacherAnnouncements />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/teacher/events"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <TeacherEvents />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/teacher/*"
                         element={
                             <ProtectedRoute requiredRole="teacher">
@@ -430,6 +450,14 @@ function App() {
                         }
                     />
                     <Route
+                        path="/parent/ptm-booking"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ParentPTMBooking />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/parent/*"
                         element={
                             <ProtectedRoute requiredRole="parent">
@@ -454,6 +482,16 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <ChangePassword />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* Notifications Route */}
+                    <Route
+                        path="/notifications"
+                        element={
+                            <ProtectedRoute>
+                                <Notifications />
                             </ProtectedRoute>
                         }
                     />

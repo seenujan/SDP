@@ -46,4 +46,13 @@ router.get('/events', async (req, res) => {
     }
 });
 
+// PTM Booking
+router.get('/ptm/my-requests', (req, res) => parentController.getMyPTMs(req, res));
+router.post('/ptm/request', (req, res) => parentController.requestPTM(req, res));
+router.put('/ptm/:id/respond', (req, res) => parentController.respondToAlternative(req, res));
+router.put('/ptm/:id/status', (req, res) => parentController.updatePTMStatus(req, res));
+// Booked Slots
+router.get('/teachers/:teacherId/booked-slots', (req, res) => parentController.getBookedSlots(req, res));
+router.get('/child/:childId/teachers', (req, res) => parentController.getChildTeachers(req, res));
+
 export default router;

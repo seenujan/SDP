@@ -164,11 +164,21 @@ CREATE TABLE IF NOT EXISTS ptm_meetings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     teacher_id INT NOT NULL,
+    parent_id INT NOT NULL,
     meeting_date DATE NOT NULL,
-    status ENUM('pending', 'confirmed', 'completed') NOT NULL,
-    notes TEXT,
+    meeting_time VARCHAR(20) NOT NULL, -- e.g. "13:30-14:00"
+    status ENUM('pending', 'approved', 'rejected', 'completed', 'reschedule_requested') NOT NULL DEFAULT 'pending',
+    initiator ENUM('parent', 'teacher') NOT NULL DEFAULT 'parent',
+    notes TEXT, -- Initial request reason
+    rejection_reason TEXT,
+    alternative_date DATE,
+    alternative_time VARCHAR(20),
+    teacher_remarks TEXT, -- Post-meeting remarks
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE, -- Changed from teachers(id) to users(id) for consistency if teachers table is just metadata
+    FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- 16. PTM Feedback Table (Feedback from teacher and parent)

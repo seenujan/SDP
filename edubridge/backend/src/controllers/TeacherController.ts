@@ -10,6 +10,7 @@ import { termMarksService } from '../services/TermMarksService';
 import { questionBankService } from '../services/QuestionBankService';
 import { studentPortfolioService } from '../services/StudentPortfolioService';
 import { ptmBookingService } from '../services/PTMBookingService';
+import { announcementService, eventService } from '../services/AnnouncementService';
 import { pool } from '../config/database';
 
 export class TeacherController {
@@ -178,6 +179,7 @@ export class TeacherController {
                     s.full_name,
                     s.roll_number,
                     s.class_id,
+                    s.parent_id,
                     u.email
                 FROM students s
                 JOIN users u ON s.user_id = u.id
@@ -463,16 +465,58 @@ export class TeacherController {
         }
     }
 
+    async initiatePTM(req: AuthRequest, res: Response) {
+        try {
+            const teacherId = req.user!.id;
+            const { studentId, parentId, meetingDate, meetingTime, notes } = req.body;
+
+            // Basic validation
+            if (!studentId || !parentId || !meetingDate || !meetingTime) {
+                return res.status(400).json({ error: 'Missing required fields' });
+            }
+
+            const booking = await ptmBookingService.createPTMBooking({
+                teacher_id: teacherId,
+                student_id: studentId,
+                parent_id: parentId,
+                meeting_date: meetingDate,
+                meeting_time: meetingTime,
+                notes: notes,
+                initiator: 'teacher',
+                status: 'pending'
+            });
+            res.status(201).json(booking);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
     async updatePTMStatus(req: AuthRequest, res: Response) {
         try {
-            const { status, approved_date, approved_time, teacher_remarks } = req.body;
-            const booking = await ptmBookingService.updatePTMStatus(
-                parseInt(req.params.id),
-                status,
-                approved_date,
-                approved_time,
-                teacher_remarks
-            );
+            const { status, rejection_reason, alternative_date, alternative_time } = req.body;
+            const bookingId = parseInt(req.params.id);
+
+            let booking;
+            if (status === 'approved') {
+                booking = await ptmBookingService.approvePTM(bookingId);
+            } else if (status === 'rejected') {
+                if (alternative_date && alternative_time) {
+                    // Reject with alternative
+                    booking = await ptmBookingService.rejectWithAlternative(
+                        bookingId,
+                        rejection_reason || 'Reschedule requested',
+                        alternative_date,
+                        alternative_time
+                    );
+                } else {
+                    // Simple rejection
+                    booking = await ptmBookingService.rejectPTM(bookingId, rejection_reason || 'Rejected');
+                }
+            } else if (status === 'completed') {
+                booking = await ptmBookingService.completePTM(bookingId);
+            } else {
+                return res.status(400).json({ error: 'Invalid status' });
+            }
             res.json(booking);
         } catch (error: any) {
             res.status(400).json({ error: error.message });
@@ -493,6 +537,97 @@ export class TeacherController {
         try {
             const details = await examService.getStudentAttemptDetails(parseInt(req.params.attemptId));
             res.json(details);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Announcements
+    async createAnnouncement(req: AuthRequest, res: Response) {
+        try {
+            const announcement = await announcementService.createAnnouncement({
+                ...req.body,
+                postedBy: req.user!.id,
+            });
+            res.status(201).json(announcement);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async getAnnouncements(req: AuthRequest, res: Response) {
+        try {
+            // Teachers can see all announcements (or we could filter, but typically they see all school announcements)
+            // Ideally we should filter by "created by me" OR "school wide". 
+            // For now, let's allow them to see all, similar to Admin/Users.
+            const announcements = await announcementService.getAllAnnouncements();
+            res.json(announcements);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async updateAnnouncement(req: AuthRequest, res: Response) {
+        try {
+            // TODO: Add check to ensure teacher only updates THEIR own announcement
+            const announcement = await announcementService.updateAnnouncement(
+                parseInt(req.params.id),
+                req.body
+            );
+            res.json(announcement);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async deleteAnnouncement(req: AuthRequest, res: Response) {
+        try {
+            // TODO: Add check to ensure teacher only deletes THEIR own announcement
+            await announcementService.deleteAnnouncement(parseInt(req.params.id));
+            res.json({ success: true });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Events
+    async createEvent(req: AuthRequest, res: Response) {
+        try {
+            const event = await eventService.createEvent({
+                ...req.body,
+                createdBy: req.user!.id,
+            });
+            res.status(201).json(event);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async getEvents(req: AuthRequest, res: Response) {
+        try {
+            const events = await eventService.getAllEvents();
+            res.json(events);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async updateEvent(req: AuthRequest, res: Response) {
+        try {
+            const event = await eventService.updateEvent(
+                parseInt(req.params.id),
+                req.body
+            );
+            res.json(event);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async deleteEvent(req: AuthRequest, res: Response) {
+        try {
+            await eventService.deleteEvent(parseInt(req.params.id));
+            res.json({ success: true });
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }

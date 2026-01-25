@@ -51,6 +51,8 @@ const Sidebar = () => {
                     { icon: HelpCircle, label: 'Question Bank', path: '/teacher/question-bank' },
                     { icon: Briefcase, label: 'Student Portfolio', path: '/teacher/student-portfolio' },
                     { icon: CalendarCheck, label: 'PTM Booking', path: '/teacher/ptm-booking' },
+                    { icon: School, label: 'Events', path: '/teacher/events' },
+                    { icon: Megaphone, label: 'Announcements', path: '/teacher/announcements' },
                 ];
             case 'student':
                 return [
@@ -72,7 +74,7 @@ const Sidebar = () => {
                     { icon: Briefcase, label: 'Child Portfolio', path: '/parent/child-portfolio' },
                     { icon: ClipboardList, label: 'Attendance', path: '/parent/attendance' },
                     { icon: ViewProgress, label: 'View Progress', path: '/parent/view-progress' },
-                    { icon: CalendarCheck, label: 'PTM Booking', path: '/parent/ptm' },
+                    { icon: CalendarCheck, label: 'PTM Booking', path: '/parent/ptm-booking' },
                     { icon: Megaphone, label: 'Announcements', path: '/parent/announcements' },
                     { icon: School, label: 'Events', path: '/parent/events' },
                 ];

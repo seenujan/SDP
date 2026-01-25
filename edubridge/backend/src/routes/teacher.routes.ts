@@ -70,6 +70,19 @@ router.post('/student-portfolio', (req, res) => teacherController.addPortfolioEn
 
 // PTM Booking
 router.get('/ptm-requests', (req, res) => teacherController.getPTMRequests(req, res));
+router.post('/ptm-requests', (req, res) => teacherController.initiatePTM(req, res));
 router.put('/ptm-requests/:id', (req, res) => teacherController.updatePTMStatus(req, res));
+
+// Announcements
+router.get('/announcements', (req, res) => teacherController.getAnnouncements(req, res));
+router.post('/announcements', (req, res) => teacherController.createAnnouncement(req, res));
+router.put('/announcements/:id', (req, res) => teacherController.updateAnnouncement(req, res));
+router.delete('/announcements/:id', (req, res) => teacherController.deleteAnnouncement(req, res));
+
+// Events
+router.get('/events', (req, res) => teacherController.getEvents(req, res));
+router.post('/events', (req, res) => teacherController.createEvent(req, res));
+router.put('/events/:id', (req, res) => teacherController.updateEvent(req, res));
+router.delete('/events/:id', (req, res) => teacherController.deleteEvent(req, res));
 
 export default router;

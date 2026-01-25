@@ -142,7 +142,19 @@ export const teacherAPI = {
         api.post('/teacher/student-portfolio', data),
     // PTM Booking
     getPTMRequests: (status?: string) => api.get('/teacher/ptm-requests', { params: { status } }),
+    initiatePTM: (data: any) => api.post('/teacher/ptm-requests', data),
     updatePTMStatus: (id: number, data: any) => api.put(`/teacher/ptm-requests/${id}`, data),
+
+    // Announcements & Events
+    getAnnouncements: () => api.get('/teacher/announcements'),
+    createAnnouncement: (data: any) => api.post('/teacher/announcements', data),
+    updateAnnouncement: (id: number, data: any) => api.put(`/teacher/announcements/${id}`, data),
+    deleteAnnouncement: (id: number) => api.delete(`/teacher/announcements/${id}`),
+
+    getEvents: () => api.get('/teacher/events'),
+    createEvent: (data: any) => api.post('/teacher/events', data),
+    updateEvent: (id: number, data: any) => api.put(`/teacher/events/${id}`, data),
+    deleteEvent: (id: number) => api.delete(`/teacher/events/${id}`),
 };
 
 // Student API
@@ -184,6 +196,14 @@ export const parentAPI = {
         api.get(`/parent/child/${childId}/results`),
     getAnnouncements: () => api.get('/parent/announcements'),
     getEvents: () => api.get('/parent/events'),
+    // PTM
+    getMyPTMs: () => api.get('/parent/ptm/my-requests'),
+    requestPTM: (data: any) => api.post('/parent/ptm/request', data),
+    respondToAlternative: (id: number, status: string) => api.put(`/parent/ptm/${id}/respond`, { status }),
+    updatePTMStatus: (id: number, data: any) => api.put(`/parent/ptm/${id}/status`, data),
+    getBookedSlots: (teacherId: number, date: string) =>
+        api.get(`/parent/teachers/${teacherId}/booked-slots`, { params: { date } }),
+    getChildTeachers: (childId: number) => api.get(`/parent/child/${childId}/teachers`),
 };
 
 // Profile API (available to all authenticated users)
@@ -193,3 +213,11 @@ export const profileAPI = {
     changePassword: (currentPassword: string, newPassword: string) =>
         api.post('/profile/change-password', { currentPassword, newPassword }),
 };
+
+// Notification API
+export const notificationAPI = {
+    getNotifications: (limit?: number) => api.get('/notifications', { params: { limit } }),
+    markAsRead: (id: number) => api.put(`/notifications/${id}/read`),
+    markAllAsRead: () => api.put('/notifications/read-all'),
+};
+

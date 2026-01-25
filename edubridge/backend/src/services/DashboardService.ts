@@ -35,13 +35,15 @@ export class DashboardService {
 
   // Get teacher dashboard data
   async getTeacherDashboard(teacherId: number) {
-    // Get number of classes taught
+    console.log(`[DashboardService] Fetching dashboard for teacherId: ${teacherId}`);
+
+    // 1. My Classes: Count distinct classes this teacher is assigned to
     const [classCount]: any = await pool.query(
       'SELECT COUNT(DISTINCT class_id) as count FROM timetable WHERE teacher_id = ?',
       [teacherId]
     );
 
-    // Get pending assignments (not marked)
+    // 2. Pending Assignments: Submissions for this teacher's assignments that are not yet graded
     const [pendingAssignments]: any = await pool.query(`
       SELECT COUNT(DISTINCT sub.id) as count
       FROM assignment_submissions sub
@@ -50,7 +52,8 @@ export class DashboardService {
       WHERE a.created_by = ? AND am.id IS NULL
     `, [teacherId]);
 
-    // Get upcoming exams
+    // 3. Upcoming Exams: Exams scheduled for the future (System wide or filtered if needed)
+    // For now, we show all upcoming exams to keep them informed of school schedule
     const [upcomingExams] = await pool.query(`
       SELECT * FROM exams
       WHERE exam_date >= CURDATE()
@@ -58,18 +61,94 @@ export class DashboardService {
       LIMIT 4
     `);
 
-    // Get students present today
+    // 4. Students Present Today: 
+    // Count distinct students present TODAY who belong to classes TAUGHT BY THIS TEACHER
     const [todayAttendance]: any = await pool.query(`
-      SELECT COUNT(*) as count
-      FROM attendance
-      WHERE date = CURDATE() AND status = 'present'
-    `);
+      SELECT COUNT(DISTINCT a.student_id) as count
+      FROM attendance a
+      JOIN students s ON a.student_id = s.id
+      WHERE a.date = CURDATE() 
+      AND a.status = 'present' 
+      AND s.class_id IN (
+          SELECT DISTINCT class_id FROM timetable WHERE teacher_id = ?
+      )
+    `, [teacherId]);
+
+    // 5. Today's Schedule
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let todayName = days[new Date().getDay()];
+
+    // DEMO LOGIC: If weekend, show Monday's schedule so dashboard isn't empty
+    if (todayName === 'Saturday' || todayName === 'Sunday') {
+      todayName = 'Monday';
+    }
+
+    const [todaysSchedule]: any = await pool.query(`
+        SELECT 
+            t.subject, 
+            t.start_time, 
+            t.end_time, 
+            c.grade, 
+            c.section
+        FROM timetable t
+        JOIN classes c ON t.class_id = c.id
+        WHERE t.teacher_id = ? AND t.day_of_week = ?
+        ORDER BY t.start_time ASC
+    `, [teacherId, todayName]);
+
+    // 6. Recent Activities
+    const notifications: any[] = [];
+
+    // A. Assignment Submissions (Last 5)
+    const [recentSubmissions]: any = await pool.query(`
+        SELECT s.full_name as student_name, a.title as assignment_title, sub.submitted_at
+        FROM assignment_submissions sub
+        JOIN students s ON sub.student_id = s.id
+        JOIN assignments a ON sub.assignment_id = a.id
+        WHERE a.created_by = ?
+        ORDER BY sub.submitted_at DESC
+        LIMIT 3
+    `, [teacherId]);
+
+    recentSubmissions.forEach((sub: any) => {
+      notifications.push({
+        type: 'submission',
+        message: 'Assignment submitted',
+        detail: `${sub.student_name} - ${sub.assignment_title}`,
+        time: sub.submitted_at
+      });
+    });
+
+    // B. PTM Pending Requests
+    const [ptmRequests]: any = await pool.query(`
+        SELECT s.full_name as student_name, c.grade, pm.created_at
+        FROM ptm_meetings pm
+        JOIN students s ON pm.student_id = s.id
+        JOIN classes c ON s.class_id = c.id
+        WHERE pm.teacher_id = ? AND pm.status = 'pending'
+        ORDER BY pm.created_at DESC
+        LIMIT 3
+    `, [teacherId]);
+
+    ptmRequests.forEach((req: any) => {
+      notifications.push({
+        type: 'ptm',
+        message: 'PTM request received',
+        detail: `Parent of ${req.student_name} - ${req.grade}`,
+        time: req.created_at
+      });
+    });
+
+    // Sort combined activities by time desc
+    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
     return {
       myClasses: classCount[0].count,
       pendingAssignments: pendingAssignments[0].count,
       upcomingExams: upcomingExams,
       studentsPresentToday: todayAttendance[0].count,
+      todaysSchedule: todaysSchedule,
+      recentActivities: notifications.slice(0, 5) // Top 5
     };
   }
 

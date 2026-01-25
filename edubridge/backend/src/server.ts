@@ -9,6 +9,7 @@ import teacherRoutes from './routes/teacher.routes';
 import studentRoutes from './routes/student.routes';
 import parentRoutes from './routes/parent.routes';
 import profileRoutes from './routes/profile.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

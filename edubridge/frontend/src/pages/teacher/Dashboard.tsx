@@ -70,50 +70,59 @@ const TeacherDashboard = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Today's Schedule */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6 h-full">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Schedule</h3>
                         <div className="space-y-3">
-                            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
-                                <div className="bg-blue-500 text-white w-12 h-12 rounded-lg flex items-center justify-center mr-3">
-                                    <BookOpen size={20} />
+                            {stats.todaysSchedule && stats.todaysSchedule.length > 0 ? (
+                                stats.todaysSchedule.map((item: any, index: number) => (
+                                    <div key={index} className="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                        <div className="bg-blue-500 text-white w-12 h-12 rounded-lg flex items-center justify-center mr-3 shrink-0">
+                                            <BookOpen size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-gray-800">{item.grade} {item.section} - {item.subject}</p>
+                                            <p className="text-sm text-gray-600">
+                                                {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)} • {item.grade} Classroom
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                                    <BookOpen size={32} className="mb-2 opacity-50" />
+                                    <p className="text-sm">No classes scheduled for today.</p>
                                 </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Grade 10 -Maths</p>
-                                    <p className="text-sm text-gray-600">08:00 - 09:00 • Grade 10 Classroom</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
-                                <div className="bg-blue-500 text-white w-12 h-12 rounded-lg flex items-center justify-center mr-3">
-                                    <BookOpen size={20} />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Grade 11 - Maths</p>
-                                    <p className="text-sm text-gray-600">10:00 - 11:00 • Grade 11 Classroom</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Recent Activities */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6 h-full">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activities</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-start">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">Assignment submitted</p>
-                                    <p className="text-xs text-gray-500">Kavitha Subhakaran - Maths Assignment 3</p>
-                                    <p className="text-xs text-gray-400">2 hours ago</p>
+                        <div className="space-y-4">
+                            {stats.recentActivities && stats.recentActivities.length > 0 ? (
+                                stats.recentActivities.map((activity: any, index: number) => (
+                                    <div key={index} className="flex items-start">
+                                        <div className={`w-2 h-2 rounded-full mt-2 mr-3 shrink-0 ${activity.type === 'submission' ? 'bg-blue-500' :
+                                                activity.type === 'ptm' ? 'bg-orange-500' : 'bg-green-500'
+                                            }`}></div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-800 leading-tight">{activity.message}</p>
+                                            <p className="text-xs text-gray-500 mt-1">{activity.detail}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                {new Date(activity.time).toLocaleString(undefined, {
+                                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                                    <ClipboardList size={32} className="mb-2 opacity-50" />
+                                    <p className="text-sm">No recent activities.</p>
                                 </div>
-                            </div>
-                            <div className="flex items-start">
-                                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">PTM request received</p>
-                                    <p className="text-xs text-gray-500">Parent of Thivya Mahendran - Grade 11</p>
-                                    <p className="text-xs text-gray-400">5 hours ago</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { CalendarCheck, User, Phone, Mail, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { User, CheckCircle, XCircle, Calendar, Plus, AlertCircle } from 'lucide-react';
 
 interface PTMRequest {
     id: number;
@@ -12,13 +12,17 @@ interface PTMRequest {
     roll_number: string;
     parent_email: string;
     parent_phone: string;
-    preferred_date: string;
-    preferred_time: string;
-    reason?: string;
-    status: 'pending' | 'approved' | 'rejected' | 'completed';
+    meeting_date: string; // Changed from preferred_date
+    meeting_time: string; // Changed from preferred_time
+    notes?: string;
+    status: 'pending' | 'approved' | 'rejected' | 'completed' | 'reschedule_requested';
     approved_date?: string;
     approved_time?: string;
     teacher_remarks?: string;
+    rejection_reason?: string;
+    alternative_date?: string;
+    alternative_time?: string;
+    initiator: 'parent' | 'teacher';
     created_at: string;
 }
 
@@ -26,18 +30,48 @@ const PTMBooking = () => {
     const [requests, setRequests] = useState<PTMRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<string>('');
-    const [showModal, setShowModal] = useState(false);
+
+    // Action Modal State
+    const [showActionModal, setShowActionModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<PTMRequest | null>(null);
     const [actionData, setActionData] = useState({
         status: 'approved' as 'approved' | 'rejected',
         approved_date: '',
         approved_time: '',
         teacher_remarks: '',
+        rejection_reason: '',
+        alternative_date: '',
+        alternative_time: ''
+    });
+
+    // Initiate Modal State
+    const [showInitiateModal, setShowInitiateModal] = useState(false);
+    const [classes, setClasses] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
+    const [initiateData, setInitiateData] = useState({
+        classId: '',
+        studentId: '',
+        parentId: '', // Will be set automatically when student is selected
+        meetingDate: '',
+        meetingTime: '',
+        notes: ''
     });
 
     useEffect(() => {
         fetchRequests();
     }, [filter]);
+
+    useEffect(() => {
+        if (showInitiateModal) {
+            fetchClasses();
+        }
+    }, [showInitiateModal]);
+
+    useEffect(() => {
+        if (initiateData.classId) {
+            fetchStudents(parseInt(initiateData.classId));
+        }
+    }, [initiateData.classId]);
 
     const fetchRequests = async () => {
         try {
@@ -50,28 +84,79 @@ const PTMBooking = () => {
         }
     };
 
+    const fetchClasses = async () => {
+        try {
+            const response = await teacherAPI.getMyClasses();
+            setClasses(response.data);
+        } catch (error) {
+            console.error('Failed to fetch classes:', error);
+        }
+    };
+
+    const fetchStudents = async (classId: number) => {
+        try {
+            const response = await teacherAPI.getClassStudents(classId);
+            setStudents(response.data);
+        } catch (error) {
+            console.error('Failed to fetch students:', error);
+        }
+    };
+
     const handleAction = (request: PTMRequest, action: 'approved' | 'rejected') => {
         setSelectedRequest(request);
         setActionData({
             status: action,
-            approved_date: action === 'approved' ? request.preferred_date.split('T')[0] : '',
-            approved_time: action === 'approved' ? request.preferred_time : '',
+            approved_date: action === 'approved' ? (request.meeting_date ? request.meeting_date.split('T')[0] : '') : '',
+            approved_time: action === 'approved' ? request.meeting_time : '',
             teacher_remarks: '',
+            rejection_reason: '',
+            alternative_date: '',
+            alternative_time: ''
         });
-        setShowModal(true);
+        setShowActionModal(true);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleActionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedRequest) return;
 
         try {
             await teacherAPI.updatePTMStatus(selectedRequest.id, actionData);
-            setShowModal(false);
+            setShowActionModal(false);
             setSelectedRequest(null);
             fetchRequests();
         } catch (error) {
             console.error('Failed to update PTM status:', error);
+        }
+    };
+
+    const handleInitiateSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        // Find parentId from student list
+        const selectedStudent = students.find(s => s.id === parseInt(initiateData.studentId));
+        if (!selectedStudent || !selectedStudent.parent_id) {
+            alert('Selected student does not have a linked parent account.');
+            return;
+        }
+
+        try {
+            await teacherAPI.initiatePTM({
+                ...initiateData,
+                parentId: selectedStudent.parent_id
+            });
+            setShowInitiateModal(false);
+            setInitiateData({
+                classId: '',
+                studentId: '',
+                parentId: '',
+                meetingDate: '',
+                meetingTime: '',
+                notes: ''
+            });
+            fetchRequests();
+            alert('PTM Request Sent!');
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Failed to initiate PTM');
         }
     };
 
@@ -81,6 +166,7 @@ const PTMBooking = () => {
             approved: 'bg-green-100 text-green-800',
             rejected: 'bg-red-100 text-red-800',
             completed: 'bg-blue-100 text-blue-800',
+            reschedule_requested: 'bg-purple-100 text-purple-800'
         };
         return badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800';
     };
@@ -98,49 +184,32 @@ const PTMBooking = () => {
     return (
         <DashboardLayout>
             <div className="animate-fade-in">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800">PTM Booking</h1>
-                    <p className="text-gray-600 mt-1">Manage Parent-Teacher Meeting requests</p>
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">PTM Booking</h1>
+                        <p className="text-gray-600 mt-1">Manage Parent-Teacher Meeting requests</p>
+                    </div>
+                    <button
+                        onClick={() => setShowInitiateModal(true)}
+                        className="btn-primary flex items-center space-x-2"
+                    >
+                        <Plus size={20} />
+                        <span>Initiate Meeting</span>
+                    </button>
                 </div>
 
                 {/* Filter Tabs */}
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                    <div className="flex space-x-4">
-                        <button
-                            onClick={() => setFilter('')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${filter === '' ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            All Requests
-                        </button>
-                        <button
-                            onClick={() => setFilter('pending')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'pending' ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            Pending
-                        </button>
-                        <button
-                            onClick={() => setFilter('approved')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'approved' ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            Approved
-                        </button>
-                        <button
-                            onClick={() => setFilter('rejected')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'rejected' ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            Rejected
-                        </button>
-                        <button
-                            onClick={() => setFilter('completed')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'completed' ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            Completed
-                        </button>
+                    <div className="flex flex-wrap gap-2">
+                        {['', 'pending', 'approved', 'rejected', 'completed', 'reschedule_requested'].map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setFilter(status)}
+                                className={`px-4 py-2 rounded-lg transition-colors capitalize ${filter === status ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                {status || 'All Requests'}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -156,59 +225,44 @@ const PTMBooking = () => {
                                     <div>
                                         <h3 className="font-semibold text-gray-800">{request.parent_name}</h3>
                                         <p className="text-sm text-gray-600">
-                                            Parent of {request.student_name} ({request.roll_number})
+                                            Parent of {request.student_name}
                                         </p>
                                     </div>
                                 </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
-                                    {request.status.toUpperCase()}
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${getStatusBadge(request.status)}`}>
+                                    {request.status.replace('_', ' ')}
                                 </span>
                             </div>
 
                             <div className="space-y-2 mb-4">
                                 <div className="flex items-center text-sm text-gray-600">
-                                    <Mail size={16} className="mr-2" />
-                                    <span>{request.parent_email}</span>
+                                    <span className="font-medium mr-2">Initiated by:</span> {request.initiator}
                                 </div>
-                                {request.parent_phone && (
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        <Phone size={16} className="mr-2" />
-                                        <span>{request.parent_phone}</span>
-                                    </div>
-                                )}
                                 <div className="flex items-center text-sm text-gray-600">
                                     <Calendar size={16} className="mr-2" />
                                     <span>
-                                        Preferred: {new Date(request.preferred_date).toLocaleDateString()} at {request.preferred_time}
+                                        Preferred: {new Date(request.meeting_date).toLocaleDateString()} at {request.meeting_time}
                                     </span>
                                 </div>
-                                {request.approved_date && request.status === 'approved' && (
-                                    <div className="flex items-center text-sm text-green-600 font-medium">
-                                        <CheckCircle size={16} className="mr-2" />
+                                {request.status === 'reschedule_requested' && (
+                                    <div className="flex items-center text-sm text-purple-600 font-medium">
+                                        <AlertCircle size={16} className="mr-2" />
                                         <span>
-                                            Scheduled: {new Date(request.approved_date).toLocaleDateString()} at {request.approved_time}
+                                            Proposed Alternative: {new Date(request.alternative_date!).toLocaleDateString()} at {request.alternative_time}
                                         </span>
                                     </div>
                                 )}
                             </div>
 
-                            {request.reason && (
+                            {request.notes && (
                                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-600">
-                                        <span className="font-medium">Reason:</span> {request.reason}
+                                        <span className="font-medium">Note:</span> {request.notes}
                                     </p>
                                 </div>
                             )}
 
-                            {request.teacher_remarks && (
-                                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-medium">Your Remarks:</span> {request.teacher_remarks}
-                                    </p>
-                                </div>
-                            )}
-
-                            {request.status === 'pending' && (
+                            {request.status === 'pending' && request.initiator === 'parent' && (
                                 <div className="flex space-x-3 mt-4">
                                     <button
                                         onClick={() => handleAction(request, 'approved')}
@@ -226,94 +280,206 @@ const PTMBooking = () => {
                                     </button>
                                 </div>
                             )}
-
-                            <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-                                Requested on {new Date(request.created_at).toLocaleDateString()}
-                            </div>
                         </div>
                     ))}
                 </div>
 
-                {requests.length === 0 && (
-                    <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                        <CalendarCheck className="mx-auto text-gray-400 mb-4" size={48} />
-                        <p className="text-gray-500">No PTM requests found</p>
+                {/* Initiate Modal */}
+                {showInitiateModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Initiate PTM</h2>
+                            <form onSubmit={handleInitiateSubmit} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-lg"
+                                            value={initiateData.classId}
+                                            onChange={(e) => setInitiateData({ ...initiateData, classId: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select Class</option>
+                                            {classes.map(c => <option key={c.id} value={c.id}>{c.grade} - {c.section}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-lg"
+                                            value={initiateData.studentId}
+                                            onChange={(e) => setInitiateData({ ...initiateData, studentId: e.target.value })}
+                                            required
+                                            disabled={!initiateData.classId}
+                                        >
+                                            <option value="">Select Student</option>
+                                            {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.roll_number})</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                        <input
+                                            type="date"
+                                            className="w-full px-4 py-2 border rounded-lg"
+                                            value={initiateData.meetingDate}
+                                            onChange={(e) => setInitiateData({ ...initiateData, meetingDate: e.target.value })}
+                                            required
+                                            min={new Date().toISOString().split('T')[0]}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-lg"
+                                            value={initiateData.meetingTime}
+                                            onChange={(e) => setInitiateData({ ...initiateData, meetingTime: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select Slot</option>
+                                            <option value="13:30">1:30 PM</option>
+                                            <option value="14:00">2:00 PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Note to Parent</label>
+                                    <textarea
+                                        rows={3}
+                                        className="w-full px-4 py-2 border rounded-lg"
+                                        value={initiateData.notes}
+                                        onChange={(e) => setInitiateData({ ...initiateData, notes: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex justify-end space-x-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInitiateModal(false)}
+                                        className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                                    >
+                                        Send Request
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
 
+
                 {/* Action Modal */}
-                {showModal && selectedRequest && (
+                {showActionModal && selectedRequest && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                                {actionData.status === 'approved' ? 'Approve PTM Request' : 'Reject PTM Request'}
+                                {actionData.status === 'approved' ? 'Approve PTM Request' : 'Reject / Reschedule Request'}
                             </h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="p-4 bg-gray-50 rounded-lg mb-4">
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-medium">Parent:</span> {selectedRequest.parent_name}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-medium">Student:</span> {selectedRequest.student_name} ({selectedRequest.roll_number})
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-medium">Preferred Date:</span>{' '}
-                                        {new Date(selectedRequest.preferred_date).toLocaleDateString()} at {selectedRequest.preferred_time}
-                                    </p>
-                                </div>
+                            <form onSubmit={handleActionSubmit} className="space-y-4">
+                                {actionData.status === 'approved' ? (
+                                    // Approval Form
+                                    <>
+                                        <div>
+                                            <p className="text-gray-600 mb-4">Confirm meeting details:</p>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                                    <input
+                                                        type="date"
+                                                        readOnly
+                                                        className="w-full px-4 py-2 border rounded-lg bg-gray-50"
+                                                        value={actionData.approved_date}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                                    <input
+                                                        type="time"
+                                                        readOnly
+                                                        className="w-full px-4 py-2 border rounded-lg bg-gray-50"
+                                                        value={actionData.approved_time}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+                                            <textarea
+                                                rows={3}
+                                                className="w-full px-4 py-2 border rounded-lg"
+                                                value={actionData.teacher_remarks}
+                                                onChange={(e) => setActionData({ ...actionData, teacher_remarks: e.target.value })}
+                                                placeholder="Optional remarks..."
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    // Rejection / Reschedule Form
+                                    <>
+                                        <div className="bg-red-50 p-4 rounded-lg mb-4">
+                                            <p className="text-sm text-red-800 font-medium">
+                                                You are rejecting the requested time: {new Date(selectedRequest.meeting_date).toLocaleDateString()} at {selectedRequest.meeting_time}.
+                                            </p>
+                                        </div>
 
-                                {actionData.status === 'approved' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Meeting Date *
-                                            </label>
-                                            <input
-                                                type="date"
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Rejection *</label>
+                                            <textarea
+                                                rows={2}
                                                 required
-                                                value={actionData.approved_date}
-                                                onChange={(e) => setActionData({ ...actionData, approved_date: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                className="w-full px-4 py-2 border rounded-lg"
+                                                value={actionData.rejection_reason}
+                                                onChange={(e) => setActionData({ ...actionData, rejection_reason: e.target.value })}
+                                                placeholder="Why is this slot not suitable?"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Meeting Time *
-                                            </label>
-                                            <input
-                                                type="time"
-                                                required
-                                                value={actionData.approved_time}
-                                                onChange={(e) => setActionData({ ...actionData, approved_time: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            />
+
+                                        <div className="mt-4 border-t pt-4">
+                                            <p className="font-medium text-gray-800 mb-2">Propose Alternative Slot (Optional)</p>
+                                            <p className="text-xs text-gray-500 mb-3">If you propose an alternative, the parent can accept or reject it.</p>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Alternative Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full px-4 py-2 border rounded-lg"
+                                                        value={actionData.alternative_date}
+                                                        onChange={(e) => setActionData({ ...actionData, alternative_date: e.target.value })}
+                                                        min={new Date().toISOString().split('T')[0]}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Alternative Time</label>
+                                                    <select
+                                                        className="w-full px-4 py-2 border rounded-lg"
+                                                        value={actionData.alternative_time}
+                                                        onChange={(e) => setActionData({ ...actionData, alternative_time: e.target.value })}
+                                                    >
+                                                        <option value="">Select Slot</option>
+                                                        <option value="13:30">1:30 PM</option>
+                                                        <option value="14:00">2:00 PM</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    </>
                                 )}
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Remarks {actionData.status === 'rejected' && '*'}
-                                    </label>
-                                    <textarea
-                                        rows={3}
-                                        required={actionData.status === 'rejected'}
-                                        value={actionData.teacher_remarks}
-                                        onChange={(e) => setActionData({ ...actionData, teacher_remarks: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder={
-                                            actionData.status === 'approved'
-                                                ? 'Optional remarks for the parent...'
-                                                : 'Please provide a reason for rejection...'
-                                        }
-                                    />
-                                </div>
 
                                 <div className="flex justify-end space-x-4 mt-6">
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setShowModal(false);
+                                            setShowActionModal(false);
                                             setSelectedRequest(null);
                                         }}
                                         className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -327,7 +493,7 @@ const PTMBooking = () => {
                                             : 'bg-red-600 hover:bg-red-700'
                                             }`}
                                     >
-                                        {actionData.status === 'approved' ? 'Approve Request' : 'Reject Request'}
+                                        {actionData.status === 'approved' ? 'Confirm Approval' : 'Confirm Rejection'}
                                     </button>
                                 </div>
                             </form>
