@@ -14,4 +14,12 @@ export const config = {
         secret: process.env.JWT_SECRET || 'edubridge_secret_key',
         expiresIn: '7d',
     },
+    email: {
+        host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+        port: parseInt(process.env.EMAIL_PORT || '587'),
+        user: process.env.EMAIL_USER || '',
+        pass: process.env.EMAIL_PASS || '',
+        secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+        from: process.env.EMAIL_FROM || '"EduBridge Admin" <admin@edubridge.com>',
+    }
 };

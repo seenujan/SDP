@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, Check, ExternalLink } from 'lucide-react';
+import { Bell, Check, ExternalLink, GraduationCap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { notificationAPI } from '../../services/api';
 
@@ -68,7 +68,15 @@ const Header = () => {
     };
 
     return (
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-end px-8 z-30 relative">
+        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 z-30 relative shrink-0">
+            {/* Logo */}
+            <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                    <GraduationCap className="text-white" size={20} />
+                </div>
+                <span className="text-xl font-bold text-gray-800">EduBridge</span>
+            </div>
+
             <div className="flex items-center space-x-6">
 
                 {/* Notification Bell */}

@@ -86,16 +86,9 @@ const Sidebar = () => {
     const menuItems = getMenuItems();
 
     return (
-        <div className="w-64 bg-white h-screen flex flex-col shadow-lg fixed left-0 top-0">
+        <div className="w-64 bg-white h-full flex flex-col shadow-lg border-r border-gray-200">
             {/* Logo */}
-            <div className="h-16 px-6 border-b flex items-center">
-                <div className="flex items-center space-x-2">
-                    <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                        <GraduationCap className="text-white" size={24} />
-                    </div>
-                    <span className="text-xl font-bold text-gray-800">EduBridge</span>
-                </div>
-            </div>
+
 
             {/* Navigation */}
             <nav className="flex-1 p-4 overflow-y-auto">

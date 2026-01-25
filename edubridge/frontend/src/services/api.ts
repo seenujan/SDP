@@ -40,6 +40,11 @@ export default api;
 export const authAPI = {
     login: (email: string, password: string) =>
         api.post('/auth/login', { email, password }),
+    activate: (token: string, password: string) =>
+        api.post('/auth/activate', { token, password }),
+    verifyToken: (token: string) => api.get(`/auth/verify-token?token=${token}`),
+    requestPasswordReset: (email: string) => api.post('/auth/forgot-password', { email }),
+    resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password }),
 };
 
 // Admin API
@@ -48,6 +53,9 @@ export const adminAPI = {
     getAllUsers: () => api.get('/admin/users'),
     getUserById: (id: number) => api.get(`/admin/users/${id}`),
     createUser: (userData: any) => api.post('/admin/users', userData),
+    createParent: (data: any) => api.post('/admin/users/parent', data),
+    createStudent: (data: any) => api.post('/admin/users/student', data),
+    createTeacher: (data: any) => api.post('/admin/users/teacher', data),
     updateUser: (id: number, userData: any) => api.put(`/admin/users/${id}`, userData),
     deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
     getStudents: () => api.get('/admin/users/students'),

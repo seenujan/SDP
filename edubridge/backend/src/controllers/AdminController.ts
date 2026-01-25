@@ -8,6 +8,72 @@ import certificateService from '../services/CertificateService';
 import { reportService } from '../services/ReportService';
 
 export class AdminController {
+    // User Management
+    async createParent(req: AuthRequest, res: Response) {
+        try {
+            const { email, fullName, phone } = req.body;
+            if (!email || !fullName || !phone) {
+                return res.status(400).json({ error: 'Email, Full Name, and Phone are required' });
+            }
+
+            const user = await userService.createUser({
+                email,
+                role: 'parent',
+                fullName,
+                additionalData: { phone }
+            });
+            res.status(201).json(user);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async createStudent(req: AuthRequest, res: Response) {
+        try {
+            const { email, fullName, dateOfBirth, grade, section, parentId } = req.body;
+
+            // Validate required fields
+            if (!email || !fullName || !grade || !section) {
+                return res.status(400).json({ error: 'Email, Full Name, Grade, and Section are required' });
+            }
+
+            const user = await userService.createUser({
+                email,
+                role: 'student',
+                fullName,
+                additionalData: {
+                    dateOfBirth,
+                    grade,
+                    section,
+                    parentId: parentId ? parseInt(parentId) : null
+                }
+            });
+            res.status(201).json(user);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async createTeacher(req: AuthRequest, res: Response) {
+        try {
+            const { email, fullName, subject } = req.body;
+
+            if (!email || !fullName || !subject) {
+                return res.status(400).json({ error: 'Email, Full Name, and Subject are required' });
+            }
+
+            const user = await userService.createUser({
+                email,
+                role: 'teacher',
+                fullName,
+                additionalData: { subject }
+            });
+            res.status(201).json(user);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
     // GET /api/admin/dashboard
     async getDashboard(req: AuthRequest, res: Response) {
         try {

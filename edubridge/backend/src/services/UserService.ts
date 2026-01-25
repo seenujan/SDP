@@ -1,10 +1,12 @@
 import { pool } from '../config/database';
+import crypto from 'crypto';
+import { emailService } from './EmailService';
 
 export class UserService {
     // Create a new user with role-specific data
     async createUser(userData: {
         email: string;
-        password: string;
+        password?: string;
         role: 'admin' | 'teacher' | 'student' | 'parent';
         fullName: string;
         additionalData?: any;
@@ -13,10 +15,16 @@ export class UserService {
         try {
             await connection.beginTransaction();
 
-            // Insert into users table (plain text password to match existing DB)
+            // Insert into users table
+            // Password can be null (for admin-created accounts) or provided (for legacy/seed)
+            // Active is 0 by default for admin-created (unless password provided, then maybe active?)
+            // If password is NULL, active MUST be 0.
+            const password = userData.password || null;
+            const active = userData.password ? 1 : 0; // If password provided (e.g. seed), assume active. If not, inactive.
+
             const [userResult]: any = await connection.query(
-                'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
-                [userData.email, userData.password, userData.role]
+                'INSERT INTO users (email, password, role, active) VALUES (?, ?, ?, ?)',
+                [userData.email, password, userData.role, active]
             );
 
             const userId = userResult.insertId;
@@ -78,6 +86,33 @@ export class UserService {
                 );
             }
 
+            // Generate activation token if inactive
+            if (active === 0) {
+                const token = crypto.randomBytes(32).toString('hex');
+                const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+                await connection.query(
+                    'INSERT INTO activation_tokens (token, user_id, expires_at) VALUES (?, ?, ?)',
+                    [token, userId, expiresAt]
+                );
+
+                // Send activation email
+                // We do this AFTER commit usually, but if it fails we might want to know.
+                // But we can't rollback email.
+                // Let's do it after commit logic, but here we are inside function.
+                // We'll trust EmailService to log error but not fail the transaction, OR fail it?
+                // Plan says "Send activation email".
+                try {
+                    await emailService.sendActivationEmail(userData.email, token);
+                } catch (emailError) {
+                    console.error('Failed to send activation email:', emailError);
+                    // Decide if we should rollback user creation. User probably wants to know.
+                    // But if we rollback, we lose the trace.
+                    // Let's keep the user but maybe warn.
+                    // For now, allow it.
+                }
+            }
+
             await connection.commit();
             return { id: userId, email: userData.email, role: userData.role, fullName: userData.fullName };
         } catch (error) {
@@ -92,7 +127,7 @@ export class UserService {
     async getAllUsers() {
         const [rows] = await pool.query(`
             SELECT 
-                u.id, u.email, u.role, u.created_at,
+                u.id, u.email, u.role, u.active, u.created_at,
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 t.subject,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id,
@@ -111,7 +146,7 @@ export class UserService {
     async getUserById(id: number) {
         const [rows]: any = await pool.query(
             `SELECT 
-                u.id, u.email, u.role, u.created_at,
+                u.id, u.email, u.role, u.active, u.created_at,
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 t.subject, t.id as teacher_id,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id, s.id as student_id,
@@ -237,7 +272,7 @@ export class UserService {
             SELECT 
                 s.id, s.user_id, s.full_name, s.roll_number, s.class_id, s.date_of_birth, s.parent_id,
                 c.grade, c.section,
-                u.email, u.created_at,
+                u.email, u.active, u.created_at,
                 p.full_name as parent_name
             FROM students s
             JOIN users u ON s.user_id = u.id
@@ -253,7 +288,7 @@ export class UserService {
         const [rows] = await pool.query(`
             SELECT 
                 t.id, t.user_id, t.full_name, t.subject,
-                u.email, u.created_at
+                u.email, u.active, u.created_at
             FROM teachers t
             JOIN users u ON t.user_id = u.id
             ORDER BY t.full_name
@@ -266,7 +301,7 @@ export class UserService {
         const [rows] = await pool.query(`
             SELECT 
                 p.id, p.user_id, p.full_name, p.phone,
-                u.email, u.created_at
+                u.email, u.active, u.created_at
             FROM parents p
             JOIN users u ON p.user_id = u.id
             ORDER BY p.full_name

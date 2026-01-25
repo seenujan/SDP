@@ -2,6 +2,8 @@ import { pool } from '../config/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/environment';
+import crypto from 'crypto';
+import { emailService } from './EmailService';
 
 export class AuthService {
     // Login user
@@ -19,8 +21,22 @@ export class AuthService {
 
             const user = rows[0];
 
-            // Verify password (plain text comparison for existing database)
-            const isPasswordValid = password === user.password;
+            // Check if account is active
+            if (user.active === 0) {
+                throw new Error('Account is not active. Please check your email for activation link.');
+            }
+
+            // Verify password
+            // Handle both legacy plain text and bcrypt hashed passwords
+            let isPasswordValid = false;
+
+            // Check if password looks like bcrypt hash (starts with $2a$ or $2b$)
+            if (user.password.startsWith('$2')) {
+                isPasswordValid = await bcrypt.compare(password, user.password);
+            } else {
+                // Fallback to plain text for legacy/dev data
+                isPasswordValid = password === user.password;
+            }
 
             if (!isPasswordValid) {
                 throw new Error('Invalid email or password');
@@ -76,6 +92,171 @@ export class AuthService {
     // Hash password
     async hashPassword(password: string): Promise<string> {
         return bcrypt.hash(password, 10);
+    }
+
+    // Activate account
+    async activateAccount(token: string, password: string) {
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Verify token
+            const [tokenRows]: any = await connection.query(
+                'SELECT user_id, expires_at FROM activation_tokens WHERE token = ?',
+                [token]
+            );
+
+            if (tokenRows.length === 0) {
+                throw new Error('Invalid activation token');
+            }
+
+            const { user_id, expires_at } = tokenRows[0];
+
+            if (new Date() > new Date(expires_at)) {
+                throw new Error('Activation token has expired');
+            }
+
+            // Hash new password
+            const hashedPassword = await this.hashPassword(password);
+
+            // Update user password and set active = 1
+            await connection.query(
+                'UPDATE users SET password = ?, active = 1 WHERE id = ?',
+                [hashedPassword, user_id]
+            );
+
+            // Delete token
+            await connection.query(
+                'DELETE FROM activation_tokens WHERE token = ?',
+                [token]
+            );
+
+            await connection.commit();
+            return { success: true, message: 'Account activated successfully' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+    // Verify activation token
+    async verifyToken(token: string) {
+        const connection = await pool.getConnection();
+        try {
+            const [tokenRows]: any = await connection.query(
+                `SELECT u.email 
+                 FROM activation_tokens t
+                 JOIN users u ON t.user_id = u.id
+                 WHERE t.token = ?`,
+                [token]
+            );
+
+            if (tokenRows.length === 0) {
+                // Also check password_resets table for verifyToken usage in reset password flow?
+                // The current verifyToken is specifically looking at activation_tokens.
+                // Reset password flow usually has its own verify step or we can reuse if we check both.
+                // But let's keep them separate or add logic.
+                // Actually, the prompt requirement was "verifyToken endpoint". 
+                // Let's add a verifyResetToken if needed, but for now I'll just implement resetPassword which verifies implicitly.
+                // Or I can add a specific method for verifying reset token if frontend needs to validate it on load.
+                throw new Error('Invalid activation token');
+            }
+
+            // We could also check expiry here if we want to be strict before they try to submit
+            // But main purpose is to get email.
+
+            return { valid: true, email: tokenRows[0].email };
+        } finally {
+            connection.release();
+        }
+    }
+
+    // Request password reset
+    async requestPasswordReset(email: string) {
+        // Check if user exists
+        const [users]: any = await pool.query('SELECT id, email FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            throw new Error('User not found');
+        }
+        const user = users[0];
+
+        // Generate token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Delete existing reset tokens for this user
+            await connection.query('DELETE FROM password_resets WHERE user_id = ?', [user.id]);
+
+            // Save new token
+            await connection.query(
+                'INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
+                [user.id, token, expiresAt]
+            );
+
+            await connection.commit();
+
+            // Send email
+            await emailService.sendPasswordResetEmail(user.email, token);
+
+            return { message: 'Password reset instructions sent to your email' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    // Reset password
+    async resetPassword(token: string, password: string) {
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Verify token
+            const [rows]: any = await connection.query(
+                'SELECT user_id, expires_at FROM password_resets WHERE token = ?',
+                [token]
+            );
+
+            if (rows.length === 0) {
+                throw new Error('Invalid or expired password reset token');
+            }
+
+            const { user_id, expires_at } = rows[0];
+
+            if (new Date() > new Date(expires_at)) {
+                throw new Error('Password reset token has expired');
+            }
+
+            // Hash new password
+            const hashedPassword = await this.hashPassword(password);
+
+            // Update user password
+            await connection.query(
+                'UPDATE users SET password = ? WHERE id = ?',
+                [hashedPassword, user_id]
+            );
+
+            // Delete token
+            await connection.query(
+                'DELETE FROM password_resets WHERE token = ?',
+                [token]
+            );
+
+            await connection.commit();
+            return { message: 'Password reset successfully' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     }
 }
 

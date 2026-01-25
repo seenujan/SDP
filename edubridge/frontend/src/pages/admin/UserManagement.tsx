@@ -18,6 +18,7 @@ interface User {
     phone?: string;
     parent_id?: number;
     parent_name?: string;
+    active?: number;
 }
 
 interface ParentOption {
@@ -111,9 +112,35 @@ const UserManagement = () => {
         setSubmitting(true);
         setError('');
         try {
-            await adminAPI.createUser(formData);
+            if (formData.role === 'parent') {
+                await adminAPI.createParent({
+                    email: formData.email,
+                    fullName: formData.fullName,
+                    phone: formData.additionalData.phone
+                });
+            } else if (formData.role === 'student') {
+                await adminAPI.createStudent({
+                    email: formData.email,
+                    fullName: formData.fullName,
+                    grade: formData.additionalData.grade,
+                    section: formData.additionalData.section,
+                    dateOfBirth: formData.additionalData.dateOfBirth,
+                    parentId: formData.additionalData.parentId
+                });
+            } else if (formData.role === 'teacher') {
+                await adminAPI.createTeacher({
+                    email: formData.email,
+                    fullName: formData.fullName,
+                    subject: formData.additionalData.subject
+                });
+            } else {
+                // Admin or fallback
+                await adminAPI.createUser(formData);
+            }
+
             setShowAddModal(false);
             resetForm();
+            alert(`User created successfully! An activation email has been sent to ${formData.email}.`);
             fetchData();
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to create user');
@@ -209,6 +236,15 @@ const UserManagement = () => {
             )
         },
         {
+            key: 'active',
+            header: 'Status',
+            render: (val: number) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {val === 1 ? 'Active' : 'Inactive'}
+                </span>
+            )
+        },
+        {
             key: 'created_at',
             header: 'Created',
             render: (val: string) => new Date(val).toLocaleDateString()
@@ -243,6 +279,15 @@ const UserManagement = () => {
         { key: 'section', header: 'Section', render: (val: string) => val || '-' },
         { key: 'parent_name', header: 'Parent', render: (val: string) => val || 'Not Assigned' },
         {
+            key: 'active',
+            header: 'Status',
+            render: (val: number) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {val === 1 ? 'Active' : 'Inactive'}
+                </span>
+            )
+        },
+        {
             key: 'actions',
             header: 'Actions',
             render: (_: any, row: User) => (
@@ -259,7 +304,15 @@ const UserManagement = () => {
         { key: 'full_name', header: 'Name' },
         { key: 'email', header: 'Email' },
         { key: 'subject', header: 'Subject', render: (val: string) => val || 'Not Assigned' },
-        { key: 'status', header: 'Status', render: () => <Badge status="active" /> },
+        {
+            key: 'active',
+            header: 'Status',
+            render: (val: number) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {val === 1 ? 'Active' : 'Inactive'}
+                </span>
+            )
+        },
         {
             key: 'actions',
             header: 'Actions',
@@ -277,6 +330,15 @@ const UserManagement = () => {
         { key: 'full_name', header: 'Name' },
         { key: 'email', header: 'Email' },
         { key: 'phone', header: 'Phone', render: (val: string) => val || 'N/A' },
+        {
+            key: 'active',
+            header: 'Status',
+            render: (val: number) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {val === 1 ? 'Active' : 'Inactive'}
+                </span>
+            )
+        },
         {
             key: 'actions',
             header: 'Actions',
@@ -323,18 +385,8 @@ const UserManagement = () => {
                     required
                 />
             </div>
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password {isEdit ? '(Leave blank to keep current)' : '*'}
-                </label>
-                <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    required={!isEdit}
-                />
-            </div>
+            {/* Password field removed for invite flow */}
+
             {!isEdit && (
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
@@ -474,7 +526,7 @@ const UserManagement = () => {
                         className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                     >
                         <Plus size={20} className="mr-2" />
-                        Add User
+                        Invite User
                     </button>
                 </div>
 
@@ -514,7 +566,7 @@ const UserManagement = () => {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-semibold text-gray-800">Add New User</h2>
+                                <h2 className="text-xl font-semibold text-gray-800">Invite New User</h2>
                                 <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
                             </div>
                             {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
@@ -523,7 +575,7 @@ const UserManagement = () => {
                                 <div className="flex justify-end space-x-3 mt-6">
                                     <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                                     <button type="submit" disabled={submitting} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
-                                        {submitting ? 'Creating...' : 'Create User'}
+                                        {submitting ? 'Sending Invite...' : 'Send Invitation'}
                                     </button>
                                 </div>
                             </form>

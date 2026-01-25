@@ -4,6 +4,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Auth
 import Login from './pages/auth/Login';
+import ActivateAccount from './pages/auth/ActivateAccount';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 // Admin
 import AdminDashboard from './pages/admin/Dashboard';
@@ -69,6 +72,9 @@ function App() {
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/activate" element={<ActivateAccount />} />
                     <Route path="/" element={<Navigate to="/login" replace />} />
 
                     {/* Admin Routes */}
