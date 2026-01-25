@@ -22,7 +22,6 @@ interface PortfolioEntry {
 
 const StudentPortfolio = () => {
     const [classes, setClasses] = useState<any[]>([]);
-    const [selectedClass, setSelectedClass] = useState<number | null>(null);
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [portfolioEntries, setPortfolioEntries] = useState<PortfolioEntry[]>([]);
@@ -51,7 +50,6 @@ const StudentPortfolio = () => {
     };
 
     const handleClassSelect = async (classId: number) => {
-        setSelectedClass(classId);
         setSelectedStudent(null);
         setPortfolioEntries([]);
         resetForm();

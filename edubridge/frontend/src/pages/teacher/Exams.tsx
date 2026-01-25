@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { BookOpen, Plus, Calendar, Clock, Award, ArrowRight, ArrowLeft, Check, X, Edit } from 'lucide-react';
+import { BookOpen, Plus, Calendar, Clock, Award, ArrowRight, ArrowLeft, Check, X, Edit, Eye } from 'lucide-react';
 
 interface Exam {
     id: number;
@@ -31,6 +32,7 @@ interface Question {
 }
 
 const Exams = () => {
+    const navigate = useNavigate();
     const [exams, setExams] = useState<Exam[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
@@ -247,6 +249,19 @@ const Exams = () => {
         }
     };
 
+    const handlePublish = async (id: number) => {
+        if (window.confirm('Are you sure you want to publish this exam? Students will be able to see it.')) {
+            try {
+                await teacherAPI.publishExam(id);
+                fetchExams();
+                alert('Exam published successfully!');
+            } catch (error: any) {
+                console.error('Failed to publish exam:', error);
+                alert(error.response?.data?.error || 'Failed to publish exam');
+            }
+        }
+    };
+
     const handleDelete = async (id: number) => {
         if (window.confirm('Are you sure you want to delete this exam?')) {
             try {
@@ -305,12 +320,30 @@ const Exams = () => {
                                 </div>
                                 <div className="flex space-x-2">
                                     {exam.status === 'draft' && (
+                                        <>
+                                            <button
+                                                onClick={() => handlePublish(exam.id)}
+                                                className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
+                                                title="Publish Exam"
+                                            >
+                                                <Check size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleEdit(exam)}
+                                                className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                                                title="Edit exam"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                    {exam.status === 'published' && (
                                         <button
-                                            onClick={() => handleEdit(exam)}
+                                            onClick={() => navigate(`/teacher/exams/${exam.id}/submissions`)}
                                             className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                                            title="Edit exam"
+                                            title="View Submissions"
                                         >
-                                            <Edit size={16} />
+                                            <Eye size={16} />
                                         </button>
                                     )}
                                     <button

@@ -3,6 +3,9 @@ import { AuthRequest } from '../middleware/auth';
 import { dashboardService } from '../services/DashboardService';
 import { userService } from '../services/UserService';
 import { announcementService, eventService } from '../services/AnnouncementService';
+import { studentPortfolioService } from '../services/StudentPortfolioService';
+import certificateService from '../services/CertificateService';
+import { reportService } from '../services/ReportService';
 
 export class AdminController {
     // GET /api/admin/dashboard
@@ -96,6 +99,180 @@ export class AdminController {
         try {
             await eventService.deleteEvent(parseInt(req.params.id));
             res.json({ success: true });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Student Portfolio Management
+    // Get available grades
+    async getGrades(req: AuthRequest, res: Response) {
+        try {
+            const grades = await userService.getAvailableGrades();
+            res.json(grades);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Get sections for a grade
+    async getSectionsForGrade(req: AuthRequest, res: Response) {
+        try {
+            const { grade } = req.params;
+            const sections = await userService.getSectionsForGrade(grade);
+            res.json(sections);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Get students filtered by grade and section
+    async getStudentsByFilter(req: AuthRequest, res: Response) {
+        try {
+            const { grade, section } = req.query;
+            const students = await studentPortfolioService.getStudentsByFilter(
+                grade as string,
+                section as string
+            );
+            res.json(students);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Get student portfolio with all entries
+    async getStudentPortfolio(req: AuthRequest, res: Response) {
+        try {
+            const studentId = parseInt(req.params.studentId);
+            const portfolio = await studentPortfolioService.getStudentPortfolio(studentId);
+            res.json(portfolio);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Update portfolio entry
+    async updatePortfolioEntry(req: AuthRequest, res: Response) {
+        try {
+            const entryId = parseInt(req.params.entryId);
+            const updated = await studentPortfolioService.updatePortfolioEntry(entryId, req.body);
+            res.json(updated);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    // Delete portfolio entry
+    async deletePortfolioEntry(req: AuthRequest, res: Response) {
+        try {
+            const entryId = parseInt(req.params.entryId);
+            await studentPortfolioService.deletePortfolioEntry(entryId);
+            res.json({ success: true });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Certificate Management
+
+    // Get all certificates
+    async getAllCertificates(req: AuthRequest, res: Response) {
+        try {
+            const certificates = await certificateService.getAllCertificates();
+            res.json(certificates);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Create certificate
+    async createCertificate(req: AuthRequest, res: Response) {
+        try {
+            console.log('Create certificate request:', {
+                body: req.body,
+                userId: req.user?.id,
+                userEmail: req.user?.email
+            });
+
+            if (!req.user?.id) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const certificate = await certificateService.createCertificate({
+                studentId: req.body.studentId,
+                certificateType: req.body.certificateType,
+                title: req.body.title,
+                description: req.body.description,
+                issueDate: req.body.issueDate,
+                issuedBy: req.user.id
+            });
+
+            console.log('Certificate created successfully:', certificate);
+            res.status(201).json(certificate);
+        } catch (error: any) {
+            console.error('Failed to create certificate:', error);
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    // Delete certificate
+    async deleteCertificate(req: AuthRequest, res: Response) {
+        try {
+            const id = parseInt(req.params.id);
+            await certificateService.deleteCertificate(id);
+            res.json({ success: true });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Get progress card data for a student
+    async getProgressCardData(req: AuthRequest, res: Response) {
+        try {
+            const studentId = parseInt(req.params.studentId);
+            const termId = req.query.termId ? parseInt(req.query.termId as string) : undefined;
+
+            // Get student info
+            const studentInfo = await studentPortfolioService.getStudentPortfolio(studentId);
+
+            // Get marks (you'll need to implement this based on your marks table structure)
+            // For now, returning placeholder
+            const progressData = {
+                student: studentInfo.student,
+                portfolio: studentInfo.portfolioEntries,
+                // TODO: Add marks and attendance data when those services are available
+                marks: [],
+                attendance: {}
+            };
+
+            res.json(progressData);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+    // Reports
+    async getAttendanceReport(req: AuthRequest, res: Response) {
+        try {
+            const { classId, startDate, endDate } = req.query;
+            const report = await reportService.getAttendanceReport(
+                classId ? parseInt(classId as string) : null,
+                startDate as string,
+                endDate as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getExamReport(req: AuthRequest, res: Response) {
+        try {
+            const { grade, examId } = req.query;
+            const report = await reportService.getExamReport(
+                grade as string,
+                examId ? parseInt(examId as string) : null
+            );
+            res.json(report);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }

@@ -38,15 +38,25 @@ export class AssignmentService {
         return rows;
     }
 
-    // Get assignments for a specific grade
-    async getAssignmentsByGrade(grade: string) {
+    // Get assignments for a specific class (Grade + Section)
+    async getAssignmentsByClass(grade: string, section: string, studentId: number) {
         const [rows] = await pool.query(
-            `SELECT a.*, t.full_name as teacher_name
-       FROM assignments a
-       JOIN teachers t ON a.created_by = t.user_id
-       WHERE a.grade = ?
-       ORDER BY a.due_date DESC`,
-            [grade]
+            `SELECT 
+                a.*, 
+                t.full_name as teacher_name,
+                s.status as submission_status,
+                s.submitted_at as submission_date,
+                s.submission_file_url,
+                s.id as submission_id,
+                am.marks as obtained_marks,
+                am.feedback
+            FROM assignments a
+            JOIN teachers t ON a.created_by = t.user_id
+            LEFT JOIN assignment_submissions s ON a.id = s.assignment_id AND s.student_id = ?
+            LEFT JOIN assignment_marks am ON s.id = am.assignment_submission_id
+            WHERE a.grade = ? AND (a.section = ? OR a.section IS NULL)
+            ORDER BY a.due_date DESC`,
+            [studentId, grade, section]
         );
 
         return rows;
@@ -98,22 +108,24 @@ export class AssignmentService {
 
     // Get submissions for an assignment
     async getSubmissionsForAssignment(assignmentId: number) {
+        console.log('Fetching submissions for assignment:', assignmentId);
         const [rows] = await pool.query(
             `SELECT 
         sub.*,
         s.full_name as student_name,
-        s.grade,
-        s.section,
+        c.grade,
+        c.section,
         am.marks,
         am.feedback
       FROM assignment_submissions sub
-      JOIN students s ON sub.student_id = s.id
+      LEFT JOIN students s ON sub.student_id = s.id
+      LEFT JOIN classes c ON s.class_id = c.id
       LEFT JOIN assignment_marks am ON sub.id = am.assignment_submission_id
       WHERE sub.assignment_id = ?
       ORDER BY sub.submitted_at DESC`,
             [assignmentId]
         );
-
+        console.log('Found submissions:', rows);
         return rows;
     }
 
@@ -141,12 +153,23 @@ export class AssignmentService {
 
     // Mark assignment
     async markAssignment(submissionId: number, marks: number, feedback: string) {
-        const [result] = await pool.query(
-            `INSERT INTO assignment_marks (assignment_submission_id, marks, feedback)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE marks = VALUES(marks), feedback = VALUES(feedback)`,
-            [submissionId, marks, feedback]
+        // Check if mark exists
+        const [existingMark]: any = await pool.query(
+            'SELECT id FROM assignment_marks WHERE assignment_submission_id = ?',
+            [submissionId]
         );
+
+        if (existingMark.length > 0) {
+            await pool.query(
+                'UPDATE assignment_marks SET marks = ?, feedback = ? WHERE id = ?',
+                [marks, feedback, existingMark[0].id]
+            );
+        } else {
+            await pool.query(
+                'INSERT INTO assignment_marks (assignment_submission_id, marks, feedback) VALUES (?, ?, ?)',
+                [submissionId, marks, feedback]
+            );
+        }
 
         return { submissionId, marks, feedback };
     }
@@ -182,13 +205,24 @@ export class AssignmentService {
                     submissionId = insertResult.insertId;
                 }
 
-                // Insert or update marks
-                await connection.query(
-                    `INSERT INTO assignment_marks (assignment_submission_id, marks, feedback)
-                     VALUES (?, ?, ?)
-                     ON DUPLICATE KEY UPDATE marks = VALUES(marks), feedback = VALUES(feedback)`,
-                    [submissionId, data.marks, data.feedback || null]
+                // Check if mark exists
+                const [existingMark]: any = await connection.query(
+                    'SELECT id FROM assignment_marks WHERE assignment_submission_id = ?',
+                    [submissionId]
                 );
+
+                if (existingMark.length > 0) {
+                    await connection.query(
+                        'UPDATE assignment_marks SET marks = ?, feedback = ? WHERE id = ?',
+                        [data.marks, data.feedback || null, existingMark[0].id]
+                    );
+                } else {
+                    await connection.query(
+                        `INSERT INTO assignment_marks (assignment_submission_id, marks, feedback)
+                         VALUES (?, ?, ?)`,
+                        [submissionId, data.marks, data.feedback || null]
+                    );
+                }
             }
 
             await connection.commit();

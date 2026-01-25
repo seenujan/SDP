@@ -478,6 +478,25 @@ export class TeacherController {
             res.status(400).json({ error: error.message });
         }
     }
+
+    // Exam Review
+    async getExamSubmissions(req: AuthRequest, res: Response) {
+        try {
+            const submissions = await examService.getExamSubmissions(parseInt(req.params.id));
+            res.json(submissions);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getStudentAttemptDetails(req: AuthRequest, res: Response) {
+        try {
+            const details = await examService.getStudentAttemptDetails(parseInt(req.params.attemptId));
+            res.json(details);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
 }
 
 export const teacherController = new TeacherController();

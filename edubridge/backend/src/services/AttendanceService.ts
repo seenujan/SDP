@@ -9,12 +9,27 @@ export class AttendanceService {
         class?: string;
         subject?: string;
     }) {
-        const [result] = await pool.query(
-            'INSERT INTO attendance (student_id, status, date, class, subject) VALUES (?, ?, ?, ?, ?)',
-            [data.studentId, data.status, data.date, data.class || null, data.subject || null]
+        // Check if attendance record already exists
+        const [existing]: any = await pool.query(
+            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND (subject = ? OR (subject IS NULL AND ? IS NULL))',
+            [data.studentId, data.date, data.subject || null, data.subject || null]
         );
 
-        return result;
+        if (existing && existing.length > 0) {
+            // Update existing record
+            const [result] = await pool.query(
+                'UPDATE attendance SET status = ?, class = ? WHERE id = ?',
+                [data.status, data.class || null, existing[0].id]
+            );
+            return result;
+        } else {
+            // Insert new record
+            const [result] = await pool.query(
+                'INSERT INTO attendance (student_id, status, date, class, subject) VALUES (?, ?, ?, ?, ?)',
+                [data.studentId, data.status, data.date, data.class || null, data.subject || null]
+            );
+            return result;
+        }
     }
 
     // Mark attendance for multiple students at once

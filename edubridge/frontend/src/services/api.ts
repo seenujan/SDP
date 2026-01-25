@@ -72,6 +72,26 @@ export const adminAPI = {
     createEvent: (data: any) => api.post('/admin/events', data),
     updateEvent: (id: number, data: any) => api.put(`/admin/events/${id}`, data),
     deleteEvent: (id: number) => api.delete(`/admin/events/${id}`),
+    // Student Portfolio
+    getGrades: () => api.get('/admin/portfolio/grades'),
+    getSectionsForGrade: (grade: string) => api.get(`/admin/portfolio/grades/${encodeURIComponent(grade)}/sections`),
+    getStudentsByFilter: (grade?: string, section?: string) =>
+        api.get('/admin/portfolio/students', { params: { grade, section } }),
+    getStudentPortfolio: (studentId: number) => api.get(`/admin/portfolio/student/${studentId}`),
+    updatePortfolioEntry: (entryId: number, data: any) => api.put(`/admin/portfolio/entry/${entryId}`, data),
+    deletePortfolioEntry: (entryId: number) => api.delete(`/admin/portfolio/entry/${entryId}`),
+    // Certificate Management
+    getAllCertificates: () => api.get('/admin/certificates'),
+    createCertificate: (data: any) => api.post('/admin/certificates', data),
+    deleteCertificate: (id: number) => api.delete(`/admin/certificates/${id}`),
+    // Progress Card Generation
+    getProgressCardData: (studentId: number, termId?: number) =>
+        api.get(`/admin/progress-card/${studentId}`, { params: { termId } }),
+    // Reports
+    getAttendanceReport: (classId: string, startDate: string, endDate: string) =>
+        api.get('/admin/reports/attendance', { params: { classId, startDate, endDate } }),
+    getExamReport: (grade: string, examId?: string) =>
+        api.get('/admin/reports/exams', { params: { grade, examId } }),
 };
 
 // Teacher API
@@ -102,6 +122,8 @@ export const teacherAPI = {
     removeQuestionFromExam: (examId: number, questionId: number) =>
         api.delete(`/teacher/exams/${examId}/questions/${questionId}`),
     publishExam: (id: number) => api.put(`/teacher/exams/${id}/publish`),
+    getExamSubmissions: (id: number) => api.get(`/teacher/exams/${id}/submissions`),
+    getStudentAttemptDetails: (attemptId: number) => api.get(`/teacher/exams/attempt/${attemptId}`),
     // Marks
     uploadMarks: (marks: any[]) => api.post('/teacher/marks/upload', { marks }),
     getMarksByExam: (examId: number) => api.get(`/teacher/marks/${examId}`),
@@ -127,11 +149,26 @@ export const teacherAPI = {
 export const studentAPI = {
     getDashboard: () => api.get('/student/dashboard'),
     getAssignments: () => api.get('/student/assignments'),
-    submitAssignment: (assignmentId: number, submissionFileUrl: string) =>
-        api.post(`/student/assignments/${assignmentId}/submit`, { submissionFileUrl }),
+    submitAssignment: (assignmentId: number, formData: FormData) =>
+        api.post(`/student/assignments/${assignmentId}/submit`, formData),
     getMySubmissions: () => api.get('/student/submissions'),
     getAttendance: () => api.get('/student/attendance'),
     getAnnouncements: () => api.get('/student/announcements'),
+    getExams: () => api.get('/student/exams'),
+    getExam: (id: number) => api.get(`/student/exams/${id}`),
+    saveAnswer: (id: number, data: any) => api.post(`/student/exams/${id}/answer`, data),
+    submitExamAttempt: (id: number, answers: any[]) => api.post(`/student/exams/${id}/submit-attempt`, { answers }),
+    getExamResult: (id: number) => api.get(`/student/exams/${id}/result`),
+    // Todos
+    // Todos
+    getTodos: () => api.get('/student/todos'),
+    createTodo: (data: any) => api.post('/student/todos', data),
+    updateTodo: (id: number, data: any) => api.put(`/student/todos/${id}`, data),
+    deleteTodo: (id: number) => api.delete(`/student/todos/${id}`),
+    toggleTodoStatus: (id: number) => api.patch(`/student/todos/${id}/toggle`),
+    getResults: () => api.get('/student/results'),
+    getPortfolio: () => api.get('/student/portfolio'),
+    getEvents: () => api.get('/student/events'),
 };
 
 // Parent API
@@ -141,7 +178,12 @@ export const parentAPI = {
         api.get(`/parent/child/${childId}/attendance`),
     getChildProgress: (childId: number) =>
         api.get(`/parent/child/${childId}/progress`),
+    getChildPortfolio: (childId: number) =>
+        api.get(`/parent/child/${childId}/portfolio`),
+    getChildResults: (childId: number) =>
+        api.get(`/parent/child/${childId}/results`),
     getAnnouncements: () => api.get('/parent/announcements'),
+    getEvents: () => api.get('/parent/events'),
 };
 
 // Profile API (available to all authenticated users)

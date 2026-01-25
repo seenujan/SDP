@@ -105,7 +105,7 @@ const AssignmentSubmissions = () => {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="text-lg font-semibold text-gray-800">
-                                                    {submission.student_name}
+                                                    {submission.student_name || 'Unknown Student'}
                                                 </h3>
                                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${submission.status === 'on_time'
                                                     ? 'bg-green-100 text-green-700'
@@ -133,15 +133,18 @@ const AssignmentSubmissions = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        <a
-                                            href={submission.submission_file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                                        <button
+                                            onClick={() => {
+                                                const url = submission.submission_file_url.startsWith('http')
+                                                    ? submission.submission_file_url
+                                                    : `/${submission.submission_file_url}`;
+                                                window.open(url, '_blank');
+                                            }}
+                                            className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-sm"
                                         >
-                                            <Download size={16} className="mr-2" />
-                                            Download
-                                        </a>
+                                            <FileText size={16} className="mr-2" />
+                                            Open Submission
+                                        </button>
                                     </div>
 
                                     {gradingSubmission === submission.id ? (

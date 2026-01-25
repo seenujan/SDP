@@ -50,5 +50,25 @@ router.post('/events', (req, res) => adminController.createEvent(req, res));
 router.put('/events/:id', (req, res) => adminController.updateEvent(req, res));
 router.delete('/events/:id', (req, res) => adminController.deleteEvent(req, res));
 
+// Student Portfolio Management
+router.get('/portfolio/grades', (req, res) => adminController.getGrades(req, res));
+router.get('/portfolio/grades/:grade/sections', (req, res) => adminController.getSectionsForGrade(req, res));
+router.get('/portfolio/students', (req, res) => adminController.getStudentsByFilter(req, res));
+router.get('/portfolio/student/:studentId', (req, res) => adminController.getStudentPortfolio(req, res));
+router.put('/portfolio/entry/:entryId', (req, res) => adminController.updatePortfolioEntry(req, res));
+router.delete('/portfolio/entry/:entryId', (req, res) => adminController.deletePortfolioEntry(req, res));
+
+// Certificate Management
+router.get('/certificates', (req, res) => adminController.getAllCertificates(req, res));
+router.post('/certificates', (req, res) => adminController.createCertificate(req, res));
+router.delete('/certificates/:id', (req, res) => adminController.deleteCertificate(req, res));
+
+// Progress Card Generation
+router.get('/progress-card/:studentId', (req, res) => adminController.getProgressCardData(req, res));
+
+// Reports
+router.get('/reports/attendance', (req, res) => adminController.getAttendanceReport(req, res));
+router.get('/reports/exams', (req, res) => adminController.getExamReport(req, res));
+
 export default router;
 

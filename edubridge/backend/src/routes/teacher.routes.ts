@@ -47,6 +47,8 @@ router.delete('/exams/:id', (req, res) => teacherController.deleteExam(req, res)
 router.post('/exams/:id/questions', (req, res) => teacherController.addQuestionsToExam(req, res));
 router.delete('/exams/:id/questions/:questionId', (req, res) => teacherController.removeQuestionFromExam(req, res));
 router.put('/exams/:id/publish', (req, res) => teacherController.publishExam(req, res));
+router.get('/exams/:id/submissions', (req, res) => teacherController.getExamSubmissions(req, res));
+router.get('/exams/attempt/:attemptId', (req, res) => teacherController.getStudentAttemptDetails(req, res));
 
 // Marks
 router.post('/marks/upload', (req, res) => teacherController.uploadMarks(req, res));

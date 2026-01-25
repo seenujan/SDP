@@ -18,6 +18,10 @@ import {
     HelpCircle,
     Briefcase,
     CalendarCheck,
+    Award,
+    TrendingUp,
+    CheckSquare,
+    TrendingUp as ViewProgress,
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -32,6 +36,9 @@ const Sidebar = () => {
                     { icon: Calendar, label: 'Timetable', path: '/admin/timetable' },
                     { icon: Megaphone, label: 'Announcements', path: '/admin/announcements' },
                     { icon: School, label: 'Events', path: '/admin/events' },
+                    { icon: Briefcase, label: 'Student Portfolio', path: '/admin/student-portfolio' },
+                    { icon: Award, label: 'Certificates', path: '/admin/certificates' },
+                    { icon: TrendingUp, label: 'Progress Card Generation', path: '/admin/progress-card' },
                     { icon: BarChart3, label: 'Reports', path: '/admin/reports' },
                 ];
             case 'teacher':
@@ -48,20 +55,26 @@ const Sidebar = () => {
             case 'student':
                 return [
                     { icon: LayoutDashboard, label: 'Dashboard', path: '/student/dashboard' },
-                    { icon: Calendar, label: 'Timetable', path: '/student/timetable' },
+                    { icon: CheckSquare, label: 'To-Do List', path: '/student/todo' },
                     { icon: FileText, label: 'Assignments', path: '/student/assignments' },
                     { icon: BookOpen, label: 'Exams', path: '/student/exams' },
+                    { icon: GraduationCap, label: 'View Results', path: '/student/results' },
+                    { icon: Briefcase, label: 'My Portfolio', path: '/student/portfolio' },
                     { icon: ClipboardList, label: 'Attendance', path: '/student/attendance' },
-                    { icon: GraduationCap, label: 'Results', path: '/student/results' },
+                    { icon: ViewProgress, label: 'View Progress', path: '/student/progress' },
+                    { icon: School, label: 'Events', path: '/student/events' },
                     { icon: Megaphone, label: 'Announcements', path: '/student/announcements' },
                 ];
             case 'parent':
                 return [
                     { icon: LayoutDashboard, label: 'Dashboard', path: '/parent/dashboard' },
                     { icon: UserCircle, label: 'Child Results', path: '/parent/child-results' },
+                    { icon: Briefcase, label: 'Child Portfolio', path: '/parent/child-portfolio' },
                     { icon: ClipboardList, label: 'Attendance', path: '/parent/attendance' },
-                    { icon: Users, label: 'PTM', path: '/parent/ptm' },
+                    { icon: ViewProgress, label: 'View Progress', path: '/parent/view-progress' },
+                    { icon: CalendarCheck, label: 'PTM Booking', path: '/parent/ptm' },
                     { icon: Megaphone, label: 'Announcements', path: '/parent/announcements' },
+                    { icon: School, label: 'Events', path: '/parent/events' },
                 ];
             default:
                 return [];

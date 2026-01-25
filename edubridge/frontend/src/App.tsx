@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -12,6 +11,10 @@ import UserManagement from './pages/admin/UserManagement';
 import Announcements from './pages/admin/Announcements';
 import Events from './pages/admin/Events';
 import Timetable from './pages/admin/Timetable';
+import AdminStudentPortfolio from './pages/admin/StudentPortfolio';
+import Certificates from './pages/admin/Certificates';
+import ProgressCard from './pages/admin/ProgressCard';
+import Reports from './pages/admin/Reports';
 
 // Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -24,13 +27,32 @@ import Exams from './pages/teacher/Exams';
 import UploadMarks from './pages/teacher/UploadMarks';
 import QuestionBank from './pages/teacher/QuestionBank';
 import StudentPortfolio from './pages/teacher/StudentPortfolio';
+import ExamSubmissions from './pages/teacher/ExamSubmissions';
+import ReviewStudentExam from './pages/teacher/ReviewStudentExam';
 import PTMBooking from './pages/teacher/PTMBooking';
 
 // Student
 import StudentDashboard from './pages/student/Dashboard';
+import StudentToDoList from './pages/student/ToDoList';
+import StudentAssignments from './pages/student/Assignments';
+import StudentExams from './pages/student/Exams';
+import TakeExam from './pages/student/TakeExam';
+import ReviewExam from './pages/student/ReviewExam';
+import StudentResults from './pages/student/Results';
+import StudentMyPortfolio from './pages/student/Portfolio';
+import StudentMyAttendance from './pages/student/Attendance';
+import StudentMyProgress from './pages/student/Progress';
+import StudentMyEvents from './pages/student/Events';
+import StudentAnnouncements from './pages/student/Announcements';
 
 // Parent
 import ParentDashboard from './pages/parent/Dashboard';
+import ChildResults from './pages/parent/ChildResults';
+import ParentAnnouncements from './pages/parent/Announcements';
+import ParentEvents from './pages/parent/Events';
+import ChildPortfolio from './pages/parent/ChildPortfolio';
+import ViewProgress from './pages/parent/ViewProgress';
+import ParentAttendance from './pages/parent/Attendance';
 
 // Common
 import Profile from './pages/Profile';
@@ -83,6 +105,38 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="admin">
                                 <Timetable />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/student-portfolio"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <AdminStudentPortfolio />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/certificates"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <Certificates />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/progress-card"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <ProgressCard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/reports"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <Reports />
                             </ProtectedRoute>
                         }
                     />
@@ -169,6 +223,22 @@ function App() {
                         }
                     />
                     <Route
+                        path="/teacher/exams/:id/submissions"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <ExamSubmissions />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/teacher/exams/review/:attemptId"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <ReviewStudentExam />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/teacher/student-portfolio"
                         element={
                             <ProtectedRoute requiredRole="teacher">
@@ -203,6 +273,94 @@ function App() {
                         }
                     />
                     <Route
+                        path="/student/todo"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentToDoList />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/assignments"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentAssignments />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/exams"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentExams />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/exams/:id/take"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <TakeExam />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/exams/:id/review"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <ReviewExam />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/results"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentResults />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/portfolio"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentMyPortfolio />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/attendance"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentMyAttendance />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/progress"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentMyProgress />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/events"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentMyEvents />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/student/announcements"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentAnnouncements />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/student/*"
                         element={
                             <ProtectedRoute requiredRole="student">
@@ -217,6 +375,57 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="parent">
                                 <ParentDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/parent/announcements"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ParentAnnouncements />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/parent/events"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ParentEvents />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/parent/attendance"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ParentAttendance />
+                            </ProtectedRoute>
+                        }
+                    />
+
+
+                    <Route
+                        path="/parent/child-portfolio"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ChildPortfolio />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/parent/view-progress"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ViewProgress />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/parent/child-results"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ChildResults />
                             </ProtectedRoute>
                         }
                     />
