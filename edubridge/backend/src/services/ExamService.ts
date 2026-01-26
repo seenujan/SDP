@@ -3,9 +3,8 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 interface ExamData {
     title: string;
-    subject: string;
-    grade: string;
-    section?: string;
+    subject_id: number;
+    class_id: number;
     exam_date: string;
     duration: number;
     total_marks: number;
@@ -22,9 +21,12 @@ class ExamService {
         const [rows] = await pool.execute<RowDataPacket[]>(
             `SELECT 
                 e.*,
-                CONCAT(e.grade, ' ', IFNULL(e.section, '')) as class_name,
+                CONCAT(c.grade, ' ', c.section) as class_name,
+                s.subject_name as subject,
                 COUNT(DISTINCT eq.question_id) as question_count
             FROM exams e
+            JOIN classes c ON e.class_id = c.id
+            JOIN subjects s ON e.subject_id = s.id
             LEFT JOIN exam_questions eq ON e.id = eq.exam_id
             WHERE e.teacher_id = ?
             GROUP BY e.id
@@ -35,41 +37,39 @@ class ExamService {
     }
 
     // Get exams for a specific class (with student status)
-    async getExamsByClass(grade: string, section: string, studentId?: number) {
+    async getExamsByClass(classId: number, studentId?: number) {
         let query = `SELECT 
                 e.*, 
                 t.full_name as teacher_name,
+                s.subject_name as subject,
                 COUNT(DISTINCT eq.question_id) as question_count
             FROM exams e
             JOIN teachers t ON e.teacher_id = t.user_id
+            JOIN subjects s ON e.subject_id = s.id
             LEFT JOIN exam_questions eq ON e.id = eq.exam_id
-            WHERE e.grade = ? 
-            AND (e.section = ? OR e.section IS NULL)
+            WHERE e.class_id = ? 
             AND e.status = 'published'
-            GROUP BY e.id, t.full_name`;
+            GROUP BY e.id, t.full_name, s.subject_name`;
 
-        const params: any[] = [grade, section];
-
-        // If studentId provided, we need to check attempt status
-        // But doing a LEFT JOIN with a specific student ID inside the join condition is tricky with group by
-        // Standard way: LEFT JOIN student_exam_attempts sea ON e.id = sea.exam_id AND sea.student_id = ?
+        const params: any[] = [classId];
 
         if (studentId) {
             query = `SELECT 
                 e.*, 
                 t.full_name as teacher_name,
+                s.subject_name as subject,
                 COUNT(DISTINCT eq.question_id) as question_count,
                 sea.status as attempt_status,
                 sea.id as attempt_id,
                 sea.total_score
             FROM exams e
             JOIN teachers t ON e.teacher_id = t.user_id
+            JOIN subjects s ON e.subject_id = s.id
             LEFT JOIN exam_questions eq ON e.id = eq.exam_id
             LEFT JOIN student_exam_attempts sea ON e.id = sea.exam_id AND sea.student_id = ?
-            WHERE e.grade = ? 
-            AND (e.section = ? OR e.section IS NULL)
+            WHERE e.class_id = ? 
             AND e.status = 'published'
-            GROUP BY e.id, t.full_name, sea.status, sea.id, sea.total_score`;
+            GROUP BY e.id, t.full_name, s.subject_name, sea.status, sea.id, sea.total_score`;
             params.unshift(studentId); // Add studentId at the start
         }
 
@@ -82,8 +82,12 @@ class ExamService {
     // Get single exam with all questions
     async getExamById(examId: number, teacherId: number) {
         const [examRows] = await pool.execute<RowDataPacket[]>(
-            `SELECT e.*, CONCAT(e.grade, ' ', IFNULL(e.section, '')) as class_name
+            `SELECT e.*, 
+                CONCAT(c.grade, ' ', c.section) as class_name,
+                s.subject_name as subject
             FROM exams e
+            JOIN classes c ON e.class_id = c.id
+            JOIN subjects s ON e.subject_id = s.id
             WHERE e.id = ? AND e.teacher_id = ?`,
             [examId, teacherId]
         );
@@ -126,13 +130,12 @@ class ExamService {
     async createExam(examData: ExamData, teacherId: number) {
         const [result] = await pool.execute<ResultSetHeader>(
             `INSERT INTO exams 
-            (title, subject, grade, section, teacher_id, exam_date, duration, total_marks)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            (title, subject_id, class_id, teacher_id, exam_date, duration, total_marks)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 examData.title,
-                examData.subject,
-                examData.grade,
-                examData.section || null,
+                examData.subject_id,
+                examData.class_id,
                 teacherId,
                 examData.exam_date,
                 examData.duration,
@@ -155,17 +158,13 @@ class ExamService {
             fields.push('title = ?');
             values.push(examData.title);
         }
-        if (examData.subject) {
-            fields.push('subject = ?');
-            values.push(examData.subject);
+        if (examData.subject_id) {
+            fields.push('subject_id = ?');
+            values.push(examData.subject_id);
         }
-        if (examData.grade) {
-            fields.push('grade = ?');
-            values.push(examData.grade);
-        }
-        if (examData.section !== undefined) {
-            fields.push('section = ?');
-            values.push(examData.section || null);
+        if (examData.class_id) {
+            fields.push('class_id = ?');
+            values.push(examData.class_id);
         }
         if (examData.exam_date) {
             fields.push('exam_date = ?');
@@ -300,7 +299,10 @@ class ExamService {
     async getStudentExamById(examId: number) {
         // Get exam details
         const [examRows] = await pool.execute<RowDataPacket[]>(
-            `SELECT * FROM exams WHERE id = ?`,
+            `SELECT e.*, s.subject_name as subject 
+             FROM exams e
+             JOIN subjects s ON e.subject_id = s.id
+             WHERE e.id = ?`,
             [examId]
         );
 

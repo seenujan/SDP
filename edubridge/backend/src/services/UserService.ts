@@ -129,11 +129,12 @@ export class UserService {
             SELECT 
                 u.id, u.email, u.role, u.active, u.created_at,
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
-                t.subject,
+                sub.subject_name as subject,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id,
                 p.phone
             FROM users u
             LEFT JOIN teachers t ON u.id = t.user_id
+            LEFT JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN students s ON u.id = s.user_id
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN parents p ON u.id = p.user_id
@@ -148,11 +149,12 @@ export class UserService {
             `SELECT 
                 u.id, u.email, u.role, u.active, u.created_at,
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
-                t.subject, t.id as teacher_id,
+                sub.subject_name as subject, t.subject_id, t.id as teacher_id,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id, s.id as student_id,
                 p.phone, p.id as parent_id_record
             FROM users u
             LEFT JOIN teachers t ON u.id = t.user_id
+            LEFT JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN students s ON u.id = s.user_id
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN parents p ON u.id = p.user_id
@@ -167,6 +169,7 @@ export class UserService {
         email?: string;
         password?: string;
         fullName?: string;
+        active?: boolean;
         additionalData?: any;
     }) {
         const connection = await pool.getConnection();
@@ -179,7 +182,7 @@ export class UserService {
             const role = userRows[0].role;
 
             // Update users table
-            if (userData.email || userData.password) {
+            if (userData.email || userData.password || userData.active !== undefined) {
                 const updates: string[] = [];
                 const values: any[] = [];
 
@@ -190,6 +193,10 @@ export class UserService {
                 if (userData.password) {
                     updates.push('password = ?');
                     values.push(userData.password);
+                }
+                if (userData.active !== undefined) {
+                    updates.push('active = ?');
+                    values.push(userData.active ? 1 : 0);
                 }
 
                 if (updates.length > 0) {
@@ -231,7 +238,7 @@ export class UserService {
                 const values: any[] = [];
 
                 if (userData.fullName) { updates.push('full_name = ?'); values.push(userData.fullName); }
-                if (userData.additionalData?.subject) { updates.push('subject = ?'); values.push(userData.additionalData.subject); }
+                if (userData.additionalData?.subjectId) { updates.push('subject_id = ?'); values.push(userData.additionalData.subjectId); }
 
                 if (updates.length > 0) {
                     values.push(id);
@@ -287,10 +294,11 @@ export class UserService {
     async getTeachers() {
         const [rows] = await pool.query(`
             SELECT 
-                t.id, t.user_id, t.full_name, t.subject,
+                t.id, t.user_id, t.full_name, t.subject_id, s.subject_name as subject,
                 u.email, u.active, u.created_at
             FROM teachers t
             JOIN users u ON t.user_id = u.id
+            LEFT JOIN subjects s ON t.subject_id = s.id
             ORDER BY t.full_name
         `);
         return rows;
@@ -352,7 +360,7 @@ export class UserService {
         fullName?: string;
         email?: string;
         phone?: string;
-        subject?: string;
+        subjectId?: number;
         dateOfBirth?: string;
     }) {
         const connection = await pool.getConnection();
@@ -386,7 +394,7 @@ export class UserService {
                 const values: any[] = [];
 
                 if (profileData.fullName) { updates.push('full_name = ?'); values.push(profileData.fullName); }
-                if (profileData.subject) { updates.push('subject = ?'); values.push(profileData.subject); }
+                if (profileData.subjectId) { updates.push('subject_id = ?'); values.push(profileData.subjectId); }
 
                 if (updates.length > 0) {
                     values.push(userId);

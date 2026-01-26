@@ -11,6 +11,7 @@ import { questionBankService } from '../services/QuestionBankService';
 import { studentPortfolioService } from '../services/StudentPortfolioService';
 import { ptmBookingService } from '../services/PTMBookingService';
 import { announcementService, eventService } from '../services/AnnouncementService';
+import { subjectService } from '../services/SubjectService';
 import { pool } from '../config/database';
 
 export class TeacherController {
@@ -34,6 +35,21 @@ export class TeacherController {
         }
     }
 
+    // Subjects
+    async getAllSubjects(req: AuthRequest, res: Response) {
+        try {
+            const [subjects] = await pool.query(`
+                SELECT s.* 
+                FROM subjects s
+                JOIN teachers t ON t.subject_id = s.id
+                WHERE t.user_id = ?
+            `, [req.user!.id]);
+            res.json(subjects);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // Assignments
     async createAssignment(req: AuthRequest, res: Response) {
         try {
@@ -43,6 +59,8 @@ export class TeacherController {
 
             const assignment = await assignmentService.createAssignment({
                 ...req.body,
+                classId: parseInt(req.body.classId),
+                subjectId: parseInt(req.body.subjectId),
                 assignmentFileUrl: `uploads/assignments/${req.file.filename}`,
                 createdBy: req.user!.id,
             });
@@ -116,9 +134,11 @@ export class TeacherController {
                     c.grade,
                     c.section,
                     CONCAT(c.grade, ' ', c.section) as class_name,
-                    t.subject
+                    ts.subject_name as subject,
+                    ts.id as subject_id
                 FROM timetable t
                 JOIN classes c ON t.class_id = c.id
+                JOIN subjects ts ON t.subject_id = ts.id
                 WHERE t.teacher_id = ?
             `;
 
@@ -131,7 +151,7 @@ export class TeacherController {
             }
 
             query += `
-                ORDER BY c.grade, c.section, t.subject
+                ORDER BY c.grade, c.section, ts.subject_name
             `;
 
             console.log('Query:', query.replace(/\s+/g, ' ').trim());
@@ -174,18 +194,18 @@ export class TeacherController {
 
             // Get students by class_id
             const [students] = await pool.query(`
-                SELECT 
-                    s.id, 
-                    s.full_name,
-                    s.roll_number,
-                    s.class_id,
-                    s.parent_id,
-                    u.email
+            SELECT
+            s.id,
+                s.full_name,
+                s.roll_number,
+                s.class_id,
+                s.parent_id,
+                u.email
                 FROM students s
                 JOIN users u ON s.user_id = u.id
                 WHERE s.class_id = ?
                 ORDER BY s.roll_number, s.full_name
-            `, [classId]);
+                    `, [classId]);
 
             console.log('Students found:', Array.isArray(students) ? students.length : 0);
 
@@ -347,17 +367,14 @@ export class TeacherController {
 
     async getTermMarks(req: AuthRequest, res: Response) {
         try {
-            const { classId, term, subject } = req.params;
+            const { classId, term, subjectId } = req.params;
 
-            // Decode URL-encoded subject
-            const decodedSubject = decodeURIComponent(subject);
-
-            console.log(`Fetching term marks: classId=${classId}, term=${term}, subject=${decodedSubject}`);
+            console.log(`Fetching term marks: classId = ${classId}, term = ${term}, subjectId = ${subjectId} `);
 
             const marks = await termMarksService.getTermMarksByClass(
                 parseInt(classId),
                 term,
-                decodedSubject
+                parseInt(subjectId)
             );
 
             console.log(`Found ${marks.length} term marks`);

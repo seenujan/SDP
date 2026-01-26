@@ -60,19 +60,27 @@ CREATE TABLE students (
   FOREIGN KEY (class_id) REFERENCES classes(id)
 );
 
+-- SUBJECTS (New)
+CREATE TABLE subjects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  subject_name VARCHAR(100) NOT NULL UNIQUE
+);
+
 -- ASSIGNMENTS
 CREATE TABLE assignments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
   due_date DATETIME NOT NULL,
-  subject VARCHAR(100) NOT NULL,
-  grade VARCHAR(50) NOT NULL,
-  section VARCHAR(10),
+  due_date DATETIME NOT NULL,
+  class_id INT NOT NULL,
+  subject_id INT NOT NULL,
   assignment_file_url VARCHAR(500),
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );
 
 -- ASSIGNMENT SUBMISSIONS
@@ -82,7 +90,6 @@ CREATE TABLE assignment_submissions (
   student_id INT NOT NULL,
   submission_file_url VARCHAR(255) NOT NULL,
   submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  status ENUM('on_time','late') NOT NULL,
   FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
@@ -104,21 +111,35 @@ CREATE TABLE attendance (
   student_id INT NOT NULL,
   status ENUM('present','absent','late') NOT NULL,
   date DATE NOT NULL,
-  class VARCHAR(50),
-  subject VARCHAR(100),
-  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+  class_id INT NOT NULL,
+  subject_id INT NOT NULL,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );
 
 -- CERTIFICATES
-CREATE TABLE certificates (
+-- CERTIFICATE TYPES
+CREATE TABLE certificate_types (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CERTIFICATE ISSUE
+CREATE TABLE certificate_issue (
   id INT AUTO_INCREMENT PRIMARY KEY,
   student_id INT NOT NULL,
-  certificate_type VARCHAR(255) NOT NULL,
+  certificate_type_id INT NOT NULL,
   issue_date DATE NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
   certificate_number VARCHAR(50) UNIQUE NOT NULL,
+  description TEXT,
   issued_by INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  FOREIGN KEY (certificate_type_id) REFERENCES certificate_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE CASCADE
+);
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
@@ -139,15 +160,17 @@ CREATE TABLE events (
 CREATE TABLE exams (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
-  subject VARCHAR(100) NOT NULL,
   exam_date DATE NOT NULL,
   duration INT NOT NULL,
   total_marks INT DEFAULT 0,
   status ENUM('draft','published','archived') DEFAULT 'draft',
-  grade VARCHAR(50),
-  section VARCHAR(10),
+  class_id INT NOT NULL,
+  subject_id INT NOT NULL,
   teacher_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- QUESTION BANK
@@ -155,7 +178,7 @@ CREATE TABLE question_bank (
   id INT AUTO_INCREMENT PRIMARY KEY,
   question_text TEXT NOT NULL,
   question_type ENUM('multiple_choice','true_false','short_answer','essay') NOT NULL,
-  subject VARCHAR(100) NOT NULL,
+  subject_id INT,
   topic VARCHAR(150),
   difficulty_level ENUM('easy','medium','hard') DEFAULT 'medium',
   marks INT DEFAULT 1,
@@ -164,7 +187,8 @@ CREATE TABLE question_bank (
   teacher_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL
 );
 
 -- EXAM QUESTIONS
@@ -228,8 +252,9 @@ CREATE TABLE teachers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   full_name VARCHAR(255) NOT NULL,
-  subject VARCHAR(100) NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  subject_id INT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL
 );
 
 -- PORTFOLIOS
@@ -325,26 +350,28 @@ CREATE TABLE term_marks (
   id INT AUTO_INCREMENT PRIMARY KEY,
   student_id INT NOT NULL,
   teacher_id INT NOT NULL,
-  subject VARCHAR(100) NOT NULL,
+  subject_id INT NOT NULL,
   term VARCHAR(50) NOT NULL,
   marks DECIMAL(5,2) NOT NULL,
   feedback TEXT,
   entered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );
 
 -- TIMETABLE
 CREATE TABLE timetable (
   id INT AUTO_INCREMENT PRIMARY KEY,
   class_id INT NOT NULL,
-  subject VARCHAR(100) NOT NULL,
+  subject_id INT NOT NULL,
   day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday') NOT NULL,
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
   teacher_id INT NOT NULL,
   FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );
 
 SET FOREIGN_KEY_CHECKS=1;

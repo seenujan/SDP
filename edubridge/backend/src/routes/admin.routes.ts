@@ -13,6 +13,9 @@ router.use(requireRole(['admin']));
 // Dashboard
 router.get('/dashboard', (req, res) => adminController.getDashboard(req, res));
 
+// Subjects
+router.get('/subjects', (req, res) => adminController.getSubjects(req, res));
+
 // Classes
 router.get('/classes', (req, res) => userController.getClasses(req, res));
 
@@ -29,6 +32,7 @@ router.post('/users/teacher', (req, res) => adminController.createTeacher(req, r
 router.post('/users/parent', (req, res) => adminController.createParent(req, res));
 router.post('/users', (req, res) => userController.createUser(req, res)); // Keep generic for backward config or other uses
 router.put('/users/:id', (req, res) => userController.updateUser(req, res));
+router.patch('/users/:id/status', (req, res) => adminController.toggleUserStatus(req, res));
 router.delete('/users/:id', (req, res) => userController.deleteUser(req, res));
 
 // Timetable Management
@@ -62,6 +66,7 @@ router.put('/portfolio/entry/:entryId', (req, res) => adminController.updatePort
 router.delete('/portfolio/entry/:entryId', (req, res) => adminController.deletePortfolioEntry(req, res));
 
 // Certificate Management
+router.get('/certificate-types', (req, res) => adminController.getCertificateTypes(req, res));
 router.get('/certificates', (req, res) => adminController.getAllCertificates(req, res));
 router.post('/certificates', (req, res) => adminController.createCertificate(req, res));
 router.delete('/certificates/:id', (req, res) => adminController.deleteCertificate(req, res));

@@ -13,6 +13,16 @@ export class AuthController {
 
             const result = await authService.login(email, password);
 
+            // Check active status (handle number 1/0, boolean true/false, and Buffer)
+            let isActive = result.user.active;
+            if (Buffer.isBuffer(isActive)) {
+                isActive = isActive[0] === 1;
+            }
+
+            if (isActive !== 1 && isActive !== true) {
+                return res.status(403).json({ error: 'Your account is deactivated. Please contact administrator.' });
+            }
+
             res.json(result);
         } catch (error: any) {
             res.status(401).json({ error: error.message });

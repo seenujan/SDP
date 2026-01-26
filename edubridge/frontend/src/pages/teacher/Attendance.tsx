@@ -15,6 +15,7 @@ interface Class {
     section: string;
     class_name: string;
     subject: string;
+    subject_id?: number;
     student_count: number;
 }
 
@@ -127,17 +128,14 @@ const Attendance = () => {
         const selectedClassData = classes.find(c => c.id === selectedClass);
         if (!selectedClassData) return;
 
-        // Get subject from the timetable data
-        const subject = selectedClassData.subject || 'General';
-
         setSaving(true);
         try {
             const attendanceData = students.map(student => ({
                 studentId: student.id,
                 status: attendance[student.id] || 'present',
                 date: selectedDate,
-                class: `${selectedClassData.grade} ${selectedClassData.section}`,
-                subject: subject,
+                classId: selectedClassData.id,
+                subjectId: selectedClassData.subject_id,
             }));
 
             await teacherAPI.markAttendance(attendanceData);

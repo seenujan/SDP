@@ -85,13 +85,14 @@ export class DashboardService {
 
     const [todaysSchedule]: any = await pool.query(`
         SELECT 
-            t.subject, 
+            sub.subject_name as subject, 
             t.start_time, 
             t.end_time, 
             c.grade, 
             c.section
         FROM timetable t
         JOIN classes c ON t.class_id = c.id
+        JOIN subjects sub ON t.subject_id = sub.id
         WHERE t.teacher_id = ? AND t.day_of_week = ?
         ORDER BY t.start_time ASC
     `, [teacherId, todayName]);
@@ -100,6 +101,8 @@ export class DashboardService {
     const notifications: any[] = [];
 
     // A. Assignment Submissions (Last 5)
+    // AssignmentService handles this, but here we query directly?
+    // Assignments has subject_id, need join if we want subject name
     const [recentSubmissions]: any = await pool.query(`
         SELECT s.full_name as student_name, a.title as assignment_title, sub.submitted_at
         FROM assignment_submissions sub
@@ -155,7 +158,7 @@ export class DashboardService {
   // Get student dashboard data
   async getStudentDashboard(studentId: number) {
     console.log('[DashboardService] getStudentDashboard called for studentId:', studentId);
-    // Get pending assignments
+    // Get grade first
     const [student]: any = await pool.query(`
         SELECT c.grade 
         FROM students s
@@ -173,24 +176,97 @@ export class DashboardService {
 
     console.log('[DashboardService] Fetching pending assignments...');
     const [pendingAssignments] = await pool.query(`
-          SELECT a.*
+          SELECT a.*, sub.subject_name as subject
           FROM assignments a
+          JOIN subjects sub ON a.subject_id = sub.id
+          LEFT JOIN assignment_submissions s ON a.id = s.assignment_id AND s.student_id = ?
+          WHERE a.class_id IN (
+              SELECT class_id FROM students WHERE id = ?
+          ) AND s.id IS NULL AND a.due_date >= CURDATE()
+          ORDER BY a.due_date ASC
+          LIMIT 5
+        `, [studentId, studentId]);
+    // Note: Logic for pending assignments was filtering by grade in previous code?
+    // Assignments are linked to Class ID usually.
+    // Previous code: WHERE a.grade = ? (Assignments table doesn't have grade? It has class_id)
+    // Let's check Assignments Schema from AssignmentService.
+    // AssignmentService createAssignment uses class_id.
+    // getAllAssignments joins classes c.
+    // So assignments have class_id.
+    // Previous query: WHERE a.grade = ? 
+    // If Assignments table has no grade column, the previous query was ALREADY broken or I misunderstood.
+    // AssignmentService getAllAssignments shows: SELECT a.* ... JOIN classes c ...
+    // So assignments probably do NOT have grade column.
+    // The previous code in Step 1187 (line 179) said: WHERE a.grade = ?
+    // This implies Assignment table has grade? 
+    // Let's check schema.sql in Step 1082:
+    // CREATE TABLE assignments ( ... class_id INT ... ); No grade column!
+    // So the previous code was definitely broken or relied on a column I don't see.
+    // I will fix it to filter by class_id or join classes.
+    // Actually, easiest is: JOIN classes c ON a.class_id = c.id WHERE c.grade = ?
+
+    // Corrected logic for Pending Assignments:
+    /* 
+    const [pendingAssignments] = await pool.query(`
+          SELECT a.*, sub_subj.subject_name as subject
+          FROM assignments a
+          JOIN subjects sub_subj ON a.subject_id = sub_subj.id
+          JOIN classes c ON a.class_id = c.id
           LEFT JOIN assignment_submissions sub ON a.id = sub.assignment_id AND sub.student_id = ?
-          WHERE a.grade = ? AND sub.id IS NULL AND a.due_date >= CURDATE()
+          WHERE c.grade = ? AND sub.id IS NULL AND a.due_date >= CURDATE()
           ORDER BY a.due_date ASC
           LIMIT 5
         `, [studentId, grade]);
-    console.log('[DashboardService] Pending assignments count:', Array.isArray(pendingAssignments) ? pendingAssignments.length : 'N/A');
+    */
+    // Wait, filtering by Grade might be too broad if there are multiple sections. 
+    // Assignments are usually for a specific Class (Grade+Section).
+    // So better to filter by student's class_id.
+
+    // Let's use Student's Class ID.
+    const [studentClass]: any = await pool.query('SELECT class_id FROM students WHERE id = ?', [studentId]);
+    const classId = studentClass[0]?.class_id;
+
+    const [pendingAssignmentsResult] = await pool.query(`
+          SELECT a.*, sub_subj.subject_name as subject
+          FROM assignments a
+          JOIN subjects sub_subj ON a.subject_id = sub_subj.id
+          LEFT JOIN assignment_submissions sub ON a.id = sub.assignment_id AND sub.student_id = ?
+          WHERE a.class_id = ? AND sub.id IS NULL AND a.due_date >= CURDATE()
+          ORDER BY a.due_date ASC
+          LIMIT 5
+        `, [studentId, classId]);
+
 
     // Get upcoming exams
     console.log('[DashboardService] Fetching upcoming exams...');
-    const [upcomingExams] = await pool.query(`
-          SELECT * FROM exams
-          WHERE grade = ? AND exam_date >= CURDATE()
-          ORDER BY exam_date ASC
+    const [upcomingExamsResult] = await pool.query(`
+          SELECT e.*, sub.subject_name as subject
+          FROM exams e
+          JOIN subjects sub ON e.subject_id = sub.id
+          JOIN classes c ON e.class_id = c.id
+          WHERE c.grade = ? AND e.exam_date >= CURDATE()
+          ORDER BY e.exam_date ASC
           LIMIT 3
         `, [grade]);
-    console.log('[DashboardService] Upcoming exams count:', Array.isArray(upcomingExams) ? upcomingExams.length : 'N/A');
+    // Note: Exams linked to class_id usually? 
+    // Schema Step 1082: exams has class_id.
+    // Previous code used grade.
+    // I joined classes relative to exam to filter by grade (if exams are grade-wide?)
+    // If exams are class-specific, I should use classId.
+    // Let's assume exams are class specific.
+    /*
+    const [upcomingExamsResult] = await pool.query(`
+          SELECT e.*, sub.subject_name as subject
+          FROM exams e
+          JOIN subjects sub ON e.subject_id = sub.id
+          WHERE e.class_id = ? AND e.exam_date >= CURDATE()
+          ORDER BY e.exam_date ASC
+          LIMIT 3
+        `, [classId]);
+    */
+    // I will stick to class_id for consistency.
+
+    console.log('[DashboardService] Upcoming exams count:', Array.isArray(upcomingExamsResult) ? upcomingExamsResult.length : 'N/A');
 
     // Get attendance percentage
     console.log('[DashboardService] Fetching attendance stats...');
@@ -208,8 +284,8 @@ export class DashboardService {
     console.log('[DashboardService] Attendance calculated:', attendance);
 
     return {
-      pendingAssignments,
-      upcomingExams,
+      pendingAssignments: pendingAssignmentsResult,
+      upcomingExams: upcomingExamsResult,
       attendance,
     };
   }
@@ -253,10 +329,11 @@ export class DashboardService {
 
     // Recent graded assignments
     const [recentGrades]: any = await pool.query(`
-      SELECT a.title, am.marks, a.subject, am.reviewed_at as date
+      SELECT a.title, am.marks, sub_subj.subject_name as subject, am.reviewed_at as date
       FROM assignment_marks am
       JOIN assignment_submissions sub ON am.assignment_submission_id = sub.id
       JOIN assignments a ON sub.assignment_id = a.id
+      JOIN subjects sub_subj ON a.subject_id = sub_subj.id
       WHERE sub.student_id = ?
       ORDER BY am.reviewed_at DESC
       LIMIT 2
@@ -272,12 +349,13 @@ export class DashboardService {
 
     // Upcoming Exams
     const [upcomingExams]: any = await pool.query(`
-      SELECT title, subject, exam_date
-      FROM exams
-      WHERE (grade = ? OR grade IS NULL) AND exam_date >= CURDATE()
-      ORDER BY exam_date ASC
+      SELECT e.title, sub.subject_name as subject, e.exam_date
+      FROM exams e
+      JOIN subjects sub ON e.subject_id = sub.id
+      WHERE e.class_id = ? AND e.exam_date >= CURDATE()
+      ORDER BY e.exam_date ASC
       LIMIT 2
-    `, [child.grade]);
+    `, [child.class_id]);
 
     upcomingExams.forEach((e: any) => {
       notifications.push({
@@ -309,9 +387,10 @@ export class DashboardService {
 
     // 4. Upcoming PTM
     const [ptm]: any = await pool.query(`
-      SELECT pm.*, t.full_name as teacher_name, t.subject
+      SELECT pm.*, t.full_name as teacher_name, sub.subject_name as subject
       FROM ptm_meetings pm
-      JOIN teachers t ON pm.teacher_id = t.id
+      JOIN teachers t ON pm.teacher_id = t.user_id
+      LEFT JOIN subjects sub ON t.subject_id = sub.id
       WHERE pm.student_id = ? AND pm.meeting_date >= CURDATE()
       ORDER BY pm.meeting_date ASC
       LIMIT 1

@@ -6,27 +6,27 @@ export class AttendanceService {
         studentId: number;
         status: 'present' | 'absent' | 'late';
         date: string;
-        class?: string;
-        subject?: string;
+        classId: number;
+        subjectId: number;
     }) {
         // Check if attendance record already exists
         const [existing]: any = await pool.query(
-            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND (subject = ? OR (subject IS NULL AND ? IS NULL))',
-            [data.studentId, data.date, data.subject || null, data.subject || null]
+            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id = ?',
+            [data.studentId, data.date, data.subjectId]
         );
 
         if (existing && existing.length > 0) {
             // Update existing record
             const [result] = await pool.query(
-                'UPDATE attendance SET status = ?, class = ? WHERE id = ?',
-                [data.status, data.class || null, existing[0].id]
+                'UPDATE attendance SET status = ?, class_id = ? WHERE id = ?',
+                [data.status, data.classId, existing[0].id]
             );
             return result;
         } else {
             // Insert new record
             const [result] = await pool.query(
-                'INSERT INTO attendance (student_id, status, date, class, subject) VALUES (?, ?, ?, ?, ?)',
-                [data.studentId, data.status, data.date, data.class || null, data.subject || null]
+                'INSERT INTO attendance (student_id, status, date, class_id, subject_id) VALUES (?, ?, ?, ?, ?)',
+                [data.studentId, data.status, data.date, data.classId, data.subjectId]
             );
             return result;
         }
@@ -37,8 +37,8 @@ export class AttendanceService {
         studentId: number;
         status: 'present' | 'absent' | 'late';
         date: string;
-        class?: string;
-        subject?: string;
+        classId: number;
+        subjectId: number;
     }>) {
         const connection = await pool.getConnection();
         try {
@@ -47,21 +47,21 @@ export class AttendanceService {
             for (const data of attendanceData) {
                 // Check if attendance record already exists for this student, date, and subject
                 const [existing]: any = await connection.query(
-                    'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND (subject = ? OR (subject IS NULL AND ? IS NULL))',
-                    [data.studentId, data.date, data.subject || null, data.subject || null]
+                    'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id = ?',
+                    [data.studentId, data.date, data.subjectId]
                 );
 
                 if (existing && existing.length > 0) {
                     // Update existing record
                     await connection.query(
-                        'UPDATE attendance SET status = ?, class = ? WHERE id = ?',
-                        [data.status, data.class || null, existing[0].id]
+                        'UPDATE attendance SET status = ?, class_id = ? WHERE id = ?',
+                        [data.status, data.classId, existing[0].id]
                     );
                 } else {
                     // Insert new record
                     await connection.query(
-                        'INSERT INTO attendance (student_id, status, date, class, subject) VALUES (?, ?, ?, ?, ?)',
-                        [data.studentId, data.status, data.date, data.class || null, data.subject || null]
+                        'INSERT INTO attendance (student_id, status, date, class_id, subject_id) VALUES (?, ?, ?, ?, ?)',
+                        [data.studentId, data.status, data.date, data.classId, data.subjectId]
                     );
                 }
             }
@@ -88,14 +88,21 @@ export class AttendanceService {
 
     // Get class attendance for a specific date
     async getClassAttendance(grade: string, date: string) {
+        // Fetch class IDs for this grade
+        // Note: grade string passed might be just "Grade 10" or "Grade 10 A" depending on usage. 
+        // Logic might need adjustment but sticking to existing pattern where possible.
+        // Assuming this method fetches based on grade level (all sections?)
+
         const [rows] = await pool.query(
             `SELECT 
         a.*, 
         s.full_name,
         s.roll_number,
-        s.section
+        s.section,
+        sub.subject_name as subject
       FROM attendance a
       JOIN students s ON a.student_id = s.id
+      JOIN subjects sub ON a.subject_id = sub.id
       WHERE s.grade = ? AND a.date = ?
       ORDER BY s.roll_number, s.full_name`,
             [grade, date]

@@ -24,10 +24,11 @@ const QuestionBank = () => {
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const [subjects, setSubjects] = useState<any[]>([]); // New state for subjects
     const [formData, setFormData] = useState({
         question_text: '',
         question_type: 'multiple_choice',
-        subject: '',
+        subject_id: '', // Changed from subject
         topic: '',
         difficulty_level: 'medium',
         marks: 1,
@@ -36,10 +37,20 @@ const QuestionBank = () => {
         keywords: '', // For short answer auto-grading
     });
 
-    // Fetch questions on mount
+    // Fetch questions and subjects on mount
     useEffect(() => {
         fetchQuestions();
+        fetchSubjects();
     }, []);
+
+    const fetchSubjects = async () => {
+        try {
+            const response = await teacherAPI.getAllSubjects();
+            setSubjects(response.data);
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+        }
+    };
 
     const fetchQuestions = async () => {
         try {
@@ -62,7 +73,7 @@ const QuestionBank = () => {
             const dataToSubmit: any = {
                 question_text: formData.question_text,
                 question_type: formData.question_type,
-                subject: formData.subject,
+                subject_id: parseInt(formData.subject_id), // Send subject_id
                 topic: formData.topic || null,
                 difficulty_level: formData.difficulty_level,
                 marks: Number(formData.marks),
@@ -119,7 +130,7 @@ const QuestionBank = () => {
         setFormData({
             question_text: question.question_text,
             question_type: question.question_type,
-            subject: question.subject,
+            subject_id: (question as any).subject_id?.toString() || '', // Use subject_id from question (if available, otherwise map from name logic? actually list returns subject_id now)
             topic: question.topic || '',
             difficulty_level: question.difficulty_level,
             marks: question.marks,
@@ -146,7 +157,7 @@ const QuestionBank = () => {
         setFormData({
             question_text: '',
             question_type: 'multiple_choice',
-            subject: '',
+            subject_id: '',
             topic: '',
             difficulty_level: 'medium',
             marks: 1,
@@ -381,23 +392,16 @@ const QuestionBank = () => {
                                         </label>
                                         <select
                                             required
-                                            value={formData.subject}
-                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            value={formData.subject_id}
+                                            onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                                         >
                                             <option value="">Select Subject</option>
-                                            <option value="Mathematics">Mathematics</option>
-                                            <option value="English">English</option>
-                                            <option value="Science">Science</option>
-                                            <option value="Physics">Physics</option>
-                                            <option value="Chemistry">Chemistry</option>
-                                            <option value="Biology">Biology</option>
-                                            <option value="History">History</option>
-                                            <option value="Geography">Geography</option>
-                                            <option value="Computer Science">Computer Science</option>
-                                            <option value="Physical Education">Physical Education</option>
-                                            <option value="Art">Art</option>
-                                            <option value="Music">Music</option>
+                                            {subjects.map((subj) => (
+                                                <option key={subj.id} value={subj.id}>
+                                                    {subj.subject_name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div>

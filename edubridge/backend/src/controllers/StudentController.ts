@@ -36,9 +36,8 @@ export class StudentController {
     async getAssignments(req: AuthRequest, res: Response) {
         try {
             const [student]: any = await pool.query(
-                `SELECT s.id, c.grade, c.section 
+                `SELECT s.id, s.class_id 
                  FROM students s 
-                 JOIN classes c ON s.class_id = c.id 
                  WHERE s.user_id = ?`,
                 [req.user!.id]
             );
@@ -48,8 +47,7 @@ export class StudentController {
             }
 
             const assignments = await assignmentService.getAssignmentsByClass(
-                student[0].grade,
-                student[0].section,
+                student[0].class_id,
                 student[0].id
             );
             res.json(assignments);
@@ -62,9 +60,8 @@ export class StudentController {
     async getExams(req: AuthRequest, res: Response) {
         try {
             const [student]: any = await pool.query(
-                `SELECT s.id, c.grade, c.section 
+                `SELECT s.id, s.class_id 
                  FROM students s 
-                 JOIN classes c ON s.class_id = c.id 
                  WHERE s.user_id = ?`,
                 [req.user!.id]
             );
@@ -74,8 +71,7 @@ export class StudentController {
             }
 
             const exams = await examService.getExamsByClass(
-                student[0].grade,
-                student[0].section,
+                student[0].class_id,
                 student[0].id
             );
             res.json(exams);

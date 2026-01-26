@@ -7,11 +7,15 @@ export class CertificateService {
         const [certificates] = await pool.query<RowDataPacket[]>(
             `SELECT 
                 c.*,
+                ct.name as certificate_type,
+                ct.name as title,
+                c.description,
                 s.full_name as student_name,
                 s.roll_number,
                 CONCAT(cl.grade, ' ', cl.section) as class_name,
                 COALESCE(t.full_name, st.full_name, p.full_name, u.email) as issued_by_name
-            FROM certificates c
+            FROM certificate_issue c
+            JOIN certificate_types ct ON c.certificate_type_id = ct.id
             JOIN students s ON c.student_id = s.id
             LEFT JOIN classes cl ON s.class_id = cl.id
             LEFT JOIN users u ON c.issued_by = u.id
@@ -23,13 +27,25 @@ export class CertificateService {
         return certificates;
     }
 
+    // Get all certificate types
+    async getCertificateTypes(): Promise<any[]> {
+        const [types] = await pool.query<RowDataPacket[]>(
+            `SELECT * FROM certificate_types ORDER BY name`
+        );
+        return types;
+    }
+
     // Get certificates for a specific student
     async getCertificatesByStudent(studentId: number): Promise<any[]> {
         const [certificates] = await pool.query<RowDataPacket[]>(
             `SELECT 
                 c.*,
+                ct.name as certificate_type,
+                ct.name as title,
+                c.description,
                 COALESCE(t.full_name, s.full_name, p.full_name, u.email) as issued_by_name
-            FROM certificates c
+            FROM certificate_issue c
+            JOIN certificate_types ct ON c.certificate_type_id = ct.id
             LEFT JOIN users u ON c.issued_by = u.id
             LEFT JOIN teachers t ON u.id = t.user_id
             LEFT JOIN students s ON u.id = s.user_id
@@ -44,8 +60,7 @@ export class CertificateService {
     // Create a new certificate
     async createCertificate(data: {
         studentId: number;
-        certificateType: string;
-        title: string;
+        certificateTypeId: number;
         description?: string;
         issueDate: string;
         issuedBy: number;
@@ -53,13 +68,12 @@ export class CertificateService {
         const certificateNumber = await this.generateCertificateNumber();
 
         const [result] = await pool.query<ResultSetHeader>(
-            `INSERT INTO certificates 
-            (student_id, certificate_type, title, description, issue_date, certificate_number, issued_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO certificate_issue 
+            (student_id, certificate_type_id, description, issue_date, certificate_number, issued_by)
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 data.studentId,
-                data.certificateType,
-                data.title,
+                data.certificateTypeId,
                 data.description || null,
                 data.issueDate,
                 certificateNumber,
@@ -71,11 +85,15 @@ export class CertificateService {
         const [certificate] = await pool.query<RowDataPacket[]>(
             `SELECT 
                 c.*,
+                ct.name as certificate_type,
+                ct.name as title,
+                c.description,
                 s.full_name as student_name,
                 s.roll_number,
                 CONCAT(cl.grade, ' ', cl.section) as class_name,
                 COALESCE(t.full_name, st.full_name, p.full_name, u.email) as issued_by_name
-            FROM certificates c
+            FROM certificate_issue c
+            JOIN certificate_types ct ON c.certificate_type_id = ct.id
             JOIN students s ON c.student_id = s.id
             LEFT JOIN classes cl ON s.class_id = cl.id
             LEFT JOIN users u ON c.issued_by = u.id
@@ -92,7 +110,7 @@ export class CertificateService {
     // Delete a certificate
     async deleteCertificate(id: number): Promise<void> {
         await pool.query(
-            'DELETE FROM certificates WHERE id = ?',
+            'DELETE FROM certificate_issue WHERE id = ?',
             [id]
         );
     }
@@ -104,7 +122,7 @@ export class CertificateService {
         // Get count of certificates issued this year
         const [result] = await pool.query<RowDataPacket[]>(
             `SELECT COUNT(*) as count 
-            FROM certificates 
+            FROM certificate_issue 
             WHERE YEAR(issue_date) = ?`,
             [year]
         );
@@ -121,10 +139,11 @@ export class CertificateService {
             `SELECT 
                 COUNT(*) as total_certificates,
                 COUNT(DISTINCT student_id) as total_students,
-                certificate_type,
+                ct.name as certificate_type,
                 COUNT(*) as count
-            FROM certificates
-            GROUP BY certificate_type`
+            FROM certificate_issue c
+            JOIN certificate_types ct ON c.certificate_type_id = ct.id
+            GROUP BY ct.name`
         );
         return stats;
     }

@@ -10,13 +10,14 @@ class ResultsService {
             `SELECT 
                 e.id, 
                 e.title as exam_title,
-                e.subject,
+                sub.subject_name as subject,
                 e.exam_date,
                 e.total_marks,
                 oem.score as obtained_marks,
                 ROUND((oem.score / e.total_marks) * 100, 2) as percentage
             FROM online_exam_marks oem
             JOIN exams e ON oem.exam_id = e.id
+            JOIN subjects sub ON e.subject_id = sub.id
             WHERE oem.student_id = ?
             ORDER BY e.exam_date DESC`,
             [studentId]
@@ -28,16 +29,17 @@ class ResultsService {
             `SELECT 
                 a.id,
                 a.title as assignment_title,
-                a.subject,
+                sub.subject_name as subject,
                 a.due_date,
                 am.marks as obtained_marks,
                 am.feedback,
-                sub.submitted_at
+                subm.submitted_at
             FROM assignment_marks am
-            JOIN assignment_submissions sub ON am.assignment_submission_id = sub.id
-            JOIN assignments a ON sub.assignment_id = a.id
-            WHERE sub.student_id = ?
-            ORDER BY sub.submitted_at DESC`,
+            JOIN assignment_submissions subm ON am.assignment_submission_id = subm.id
+            JOIN assignments a ON subm.assignment_id = a.id
+            JOIN subjects sub ON a.subject_id = sub.id
+            WHERE subm.student_id = ?
+            ORDER BY subm.submitted_at DESC`,
             [studentId]
         );
 
@@ -45,15 +47,16 @@ class ResultsService {
         // term_marks table DOES NOT HAVE total_marks
         const [termResults] = await pool.execute<RowDataPacket[]>(
             `SELECT 
-                id,
-                term,
-                subject,
-                marks as obtained_marks,
-                feedback,
-                entered_at
-            FROM term_marks
-            WHERE student_id = ?
-            ORDER BY entered_at DESC`,
+                tm.id,
+                tm.term,
+                sub.subject_name as subject,
+                tm.marks as obtained_marks,
+                tm.feedback,
+                tm.entered_at
+            FROM term_marks tm
+            JOIN subjects sub ON tm.subject_id = sub.id
+            WHERE tm.student_id = ?
+            ORDER BY tm.entered_at DESC`,
             [studentId]
         );
 

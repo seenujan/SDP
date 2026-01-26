@@ -4,6 +4,8 @@ import { adminAPI } from '../../services/api';
 import { Award, Plus, Trash2, Search, Download, Filter } from 'lucide-react';
 import { generateCertificatePDF } from '../../utils/certificatePDF';
 
+// Fixed @ 2026-01-26
+
 interface Certificate {
     id: number;
     student_name: string;
@@ -25,19 +27,15 @@ interface Student {
     class_name: string;
 }
 
-const CERTIFICATE_TYPES = [
-    'Achievement Certificate',
-    'Merit Certificate',
-    'Participation Certificate',
-    'Excellence Certificate',
-    'Good Conduct Certificate',
-    'Sports Certificate',
-    'Cultural Activity Certificate',
-];
+interface CertificateType {
+    id: number;
+    name: string;
+}
 
 const Certificates = () => {
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
+    const [certificateTypes, setCertificateTypes] = useState<CertificateType[]>([]);
     const [grades, setGrades] = useState<any[]>([]);
     const [sections, setSections] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -57,6 +55,7 @@ const Certificates = () => {
 
     useEffect(() => {
         fetchCertificates();
+        fetchCertificateTypes();
         fetchGrades();
     }, []);
 
@@ -69,6 +68,15 @@ const Certificates = () => {
             console.error('Failed to fetch certificates:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCertificateTypes = async () => {
+        try {
+            const response = await adminAPI.getCertificateTypes();
+            setCertificateTypes(response.data);
+        } catch (error) {
+            console.error('Failed to fetch certificate types:', error);
         }
     };
 
@@ -119,7 +127,7 @@ const Certificates = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.studentId || !formData.certificateType || !formData.title) {
+        if (!formData.studentId || !formData.certificateType) {
             alert('Please fill in all required fields');
             return;
         }
@@ -128,8 +136,7 @@ const Certificates = () => {
             setLoading(true);
             await adminAPI.createCertificate({
                 studentId: parseInt(formData.studentId),
-                certificateType: formData.certificateType,
-                title: formData.title,
+                certificateTypeId: parseInt(formData.certificateType), // this is now ID
                 description: formData.description,
                 issueDate: formData.issueDate,
             });
@@ -219,9 +226,9 @@ const Certificates = () => {
                                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             >
                                 <option value="">All Types</option>
-                                {CERTIFICATE_TYPES.map((type) => (
-                                    <option key={type} value={type}>
-                                        {type}
+                                {certificateTypes.map((type) => (
+                                    <option key={type.id} value={type.name}>
+                                        {type.name}
                                     </option>
                                 ))}
                             </select>
@@ -315,23 +322,40 @@ const Certificates = () => {
                                         required
                                     >
                                         <option value="">Select Type</option>
-                                        {CERTIFICATE_TYPES.map((type) => (
-                                            <option key={type} value={type}>
-                                                {type}
+                                        {certificateTypes.map((type) => (
+                                            <option key={type.id} value={type.id}>
+                                                {type.name}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
 
-                                <div>
+
+                                {/* Title and Description are now determined by Type, maybe show read-only or just hide? 
+                                    User request said: certificate_type -> title, description.
+                                    So we don't input them anymore? 
+                                    But maybe we want to see what we are issuing.
+                                    Let's remove the inputs for Title/Description if they are determined by type. 
+                                    Or maybe show them as read-only based on selection. */}
+
+                                {formData.certificateType && (
+                                    <div className="md:col-span-2 bg-gray-50 p-3 rounded-md mb-2">
+                                        <p className="text-sm font-medium text-gray-700">Selected Certificate Details:</p>
+                                        <p className="text-sm text-gray-600">
+                                            <strong>Title:</strong> {certificateTypes.find(t => t.id === parseInt(formData.certificateType))?.name}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Title *
+                                        Description (Required)
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={formData.title}
-                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        placeholder="e.g., First Place in Science Fair"
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        rows={3}
+                                        placeholder="Enter specific details (e.g., 'Winner of 100m Dash', 'Outstanding leadership in student council')..."
                                         disabled={!formData.studentId}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
                                         required
@@ -352,19 +376,7 @@ const Certificates = () => {
                                     />
                                 </div>
 
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Description (Optional)
-                                    </label>
-                                    <textarea
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        rows={3}
-                                        placeholder="Additional details about the certificate..."
-                                        disabled={!formData.studentId}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
-                                    />
-                                </div>
+                                {/* Removed Description Input */}
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
@@ -385,7 +397,8 @@ const Certificates = () => {
                             </div>
                         </form>
                     </div>
-                )}
+                )
+                }
 
                 {/* Certificates Table */}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -502,16 +515,18 @@ const Certificates = () => {
                 </div>
 
                 {/* Stats */}
-                {certificates.length > 0 && (
-                    <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
-                        <p className="text-sm text-gray-600">
-                            Showing <span className="font-semibold">{filteredCertificates.length}</span> of{' '}
-                            <span className="font-semibold">{certificates.length}</span> certificates
-                        </p>
-                    </div>
-                )}
-            </div>
-        </DashboardLayout>
+                {
+                    certificates.length > 0 && (
+                        <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
+                            <p className="text-sm text-gray-600">
+                                Showing <span className="font-semibold">{filteredCertificates.length}</span> of{' '}
+                                <span className="font-semibold">{certificates.length}</span> certificates
+                            </p>
+                        </div>
+                    )
+                }
+            </div >
+        </DashboardLayout >
     );
 };
 

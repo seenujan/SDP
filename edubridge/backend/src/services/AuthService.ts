@@ -21,10 +21,7 @@ export class AuthService {
 
             const user = rows[0];
 
-            // Check if account is active
-            if (user.active === 0) {
-                throw new Error('Account is not active. Please check your email for activation link.');
-            }
+
 
             // Verify password
             // Handle both legacy plain text and bcrypt hashed passwords
@@ -81,6 +78,7 @@ export class AuthService {
                     id: user.id,
                     email: user.email,
                     role: user.role,
+                    active: user.active,
                     ...roleData,
                 },
             };

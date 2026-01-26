@@ -107,28 +107,31 @@ export class ParentController {
 
             // Fetch Term Marks
             const [termMarks]: any = await pool.query(`
-                SELECT tm.*, t.full_name as teacher_name
+                SELECT tm.*, t.full_name as teacher_name, s.subject_name as subject
                 FROM term_marks tm
                 JOIN teachers t ON tm.teacher_id = t.user_id
+                JOIN subjects s ON tm.subject_id = s.id
                 WHERE tm.student_id = ?
                 ORDER BY tm.entered_at DESC
             `, [childId]);
 
             // Fetch Assignment Marks
             const [assignmentMarks]: any = await pool.query(`
-                SELECT am.marks, am.feedback, am.reviewed_at, a.title, a.subject
+                SELECT am.marks, am.feedback, am.reviewed_at, a.title, s.subject_name as subject
                 FROM assignment_marks am
                 JOIN assignment_submissions sub ON am.assignment_submission_id = sub.id
                 JOIN assignments a ON sub.assignment_id = a.id
+                JOIN subjects s ON a.subject_id = s.id
                 WHERE sub.student_id = ?
                 ORDER BY am.reviewed_at DESC
             `, [childId]);
 
             // Fetch Online Exam Marks
             const [examMarks]: any = await pool.query(`
-                SELECT oem.score, oem.entered_at, e.title, e.subject, e.exam_date
+                SELECT oem.score, oem.entered_at, e.title, s.subject_name as subject, e.exam_date
                 FROM online_exam_marks oem
                 JOIN exams e ON oem.exam_id = e.id
+                JOIN subjects s ON e.subject_id = s.id
                 WHERE oem.student_id = ?
                 ORDER BY e.exam_date DESC
             `, [childId]);
@@ -217,19 +220,21 @@ export class ParentController {
 
             // Get Class Teacher
             const [classTeacher]: any = await pool.query(`
-                SELECT u.id as teacher_id, u.email, t.full_name, t.subject, 'Class Teacher' as role
+                SELECT u.id as teacher_id, u.email, t.full_name, s.subject_name as subject, 'Class Teacher' as role
                 FROM classes c
                 JOIN users u ON c.class_teacher_id = u.id
                 JOIN teachers t ON u.id = t.user_id
+                LEFT JOIN subjects s ON t.subject_id = s.id
                 WHERE c.id = ?
             `, [classId]);
 
             // Get Subject Teachers from Timetable
             const [subjectTeachers]: any = await pool.query(`
-                SELECT u.id as teacher_id, u.email, t.full_name, tt.subject, 'Subject Teacher' as role
+                SELECT u.id as teacher_id, u.email, t.full_name, s.subject_name as subject, 'Subject Teacher' as role
                 FROM timetable tt
                 JOIN users u ON tt.teacher_id = u.id
                 JOIN teachers t ON u.id = t.user_id
+                LEFT JOIN subjects s ON tt.subject_id = s.id
                 WHERE tt.class_id = ?
             `, [classId]);
 

@@ -3,17 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
 import { FileText, Plus, Users, Calendar, Eye } from 'lucide-react';
-
-interface Assignment {
-    id: number;
-    title: string;
-    description: string;
-    subject: string;
-    grade: string;
-    due_date: string;
-    submission_count: number;
-    created_at: string;
-}
+import { Assignment } from '../../types';
 
 const Assignments = () => {
     const navigate = useNavigate();
@@ -23,11 +13,12 @@ const Assignments = () => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        subject: '',
-        grade: '',
-        section: '',
+        subjectId: '',
+        classId: '',
         dueDate: ''
     });
+    const [classes, setClasses] = useState<any[]>([]);
+    const [subjects, setSubjects] = useState<any[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [creating, setCreating] = useState(false);
 
@@ -37,10 +28,16 @@ const Assignments = () => {
 
     const fetchAssignments = async () => {
         try {
-            const response = await teacherAPI.getMyAssignments();
-            setAssignments(response.data);
+            const [assignmentsRes, classesRes, subjectsRes] = await Promise.all([
+                teacherAPI.getMyAssignments(),
+                teacherAPI.getMyClasses(),
+                teacherAPI.getAllSubjects()
+            ]);
+            setAssignments(assignmentsRes.data);
+            setClasses(classesRes.data);
+            setSubjects(subjectsRes.data);
         } catch (error) {
-            console.error('Failed to fetch assignments:', error);
+            console.error('Failed to fetch data:', error);
         } finally {
             setLoading(false);
         }
@@ -60,9 +57,8 @@ const Assignments = () => {
             const formDataToSend = new FormData();
             formDataToSend.append('title', formData.title);
             formDataToSend.append('description', formData.description);
-            formDataToSend.append('subject', formData.subject);
-            formDataToSend.append('grade', formData.grade);
-            formDataToSend.append('section', formData.section);
+            formDataToSend.append('subjectId', formData.subjectId);
+            formDataToSend.append('classId', formData.classId);
             formDataToSend.append('dueDate', formData.dueDate);
             formDataToSend.append('file', selectedFile);
 
@@ -72,9 +68,8 @@ const Assignments = () => {
             setFormData({
                 title: '',
                 description: '',
-                subject: '',
-                grade: '',
-                section: '',
+                subjectId: '',
+                classId: '',
                 dueDate: ''
             });
             setSelectedFile(null);
@@ -132,48 +127,35 @@ const Assignments = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Subject *
                                     </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.subject}
-                                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="e.g., Mathematics"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Grade *
-                                    </label>
                                     <select
                                         required
-                                        value={formData.grade}
-                                        onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                                        value={formData.subjectId}
+                                        onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <option value="">Select grade</option>
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(grade => (
-                                            <option key={grade} value={`Grade ${grade}`}>Grade {grade}</option>
+                                        <option value="">Select subject</option>
+                                        {subjects.map((sub: any) => (
+                                            <option key={sub.id} value={sub.id}>{sub.subject_name}</option>
                                         ))}
                                     </select>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Section *
+                                        Class *
                                     </label>
                                     <select
                                         required
-                                        value={formData.section}
-                                        onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                                        value={formData.classId}
+                                        onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <option value="">Select section</option>
-                                        <option value="A">A</option>
-                                        <option value="B">B</option>
-                                        <option value="C">C</option>
-                                        <option value="D">D</option>
+                                        <option value="">Select class</option>
+                                        {classes.map((cls: any) => (
+                                            <option key={cls.id} value={cls.id}>
+                                                {cls.grade} - {cls.section}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -282,7 +264,7 @@ const Assignments = () => {
                                                 </span>
                                                 <span className="flex items-center">
                                                     <Users size={14} className="mr-1" />
-                                                    {assignment.grade}
+                                                    {assignment.grade} - {assignment.section}
                                                 </span>
                                                 <span className="flex items-center">
                                                     <Calendar size={14} className="mr-1" />

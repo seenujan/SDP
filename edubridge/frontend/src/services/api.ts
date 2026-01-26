@@ -27,7 +27,9 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -56,7 +58,8 @@ export const adminAPI = {
     createParent: (data: any) => api.post('/admin/users/parent', data),
     createStudent: (data: any) => api.post('/admin/users/student', data),
     createTeacher: (data: any) => api.post('/admin/users/teacher', data),
-    updateUser: (id: number, userData: any) => api.put(`/admin/users/${id}`, userData),
+    updateUser: (id: number, data: any) => api.put(`/admin/users/${id}`, data),
+    toggleUserStatus: (id: number) => api.patch(`/admin/users/${id}/status`),
     deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
     getStudents: () => api.get('/admin/users/students'),
     getTeachers: () => api.get('/admin/users/teachers'),
@@ -90,6 +93,7 @@ export const adminAPI = {
     deletePortfolioEntry: (entryId: number) => api.delete(`/admin/portfolio/entry/${entryId}`),
     // Certificate Management
     getAllCertificates: () => api.get('/admin/certificates'),
+    getCertificateTypes: () => api.get('/admin/certificate-types'),
     createCertificate: (data: any) => api.post('/admin/certificates', data),
     deleteCertificate: (id: number) => api.delete(`/admin/certificates/${id}`),
     // Progress Card Generation
@@ -100,12 +104,13 @@ export const adminAPI = {
         api.get('/admin/reports/attendance', { params: { classId, startDate, endDate } }),
     getExamReport: (grade: string, examId?: string) =>
         api.get('/admin/reports/exams', { params: { grade, examId } }),
+    getSubjects: () => api.get('/admin/subjects'),
 };
 
 // Teacher API
 export const teacherAPI = {
     getDashboard: () => api.get('/teacher/dashboard'),
-    markAttendance: (attendance: any) => api.post('/teacher/attendance', { attendance }),
+    markAttendance: (attendance: any[]) => api.post('/teacher/attendance', { attendance }),
     getMyAssignments: () => api.get('/teacher/assignments'),
     createAssignment: (data: any) => api.post('/teacher/assignments', data),
     getSubmissions: (assignmentId: number) =>
@@ -114,6 +119,7 @@ export const teacherAPI = {
         api.post(`/teacher/submissions/${submissionId}/mark`, { marks, feedback }),
     uploadAssignmentMarks: (assignmentId: number, marks: any[]) =>
         api.post('/teacher/assignments/marks/upload', { assignmentId, marks }),
+    getAllSubjects: () => api.get('/teacher/subjects'),
     getMyClasses: (day?: string) => api.get('/teacher/classes', { params: day ? { day } : {} }),
     getClassStudents: (classId: number) => api.get(`/teacher/classes/${classId}/students`),
     getMyTimetable: () => api.get('/teacher/timetable'),
@@ -137,8 +143,8 @@ export const teacherAPI = {
     getMarksByExam: (examId: number) => api.get(`/teacher/marks/${examId}`),
     // Term Marks
     uploadTermMarks: (marks: any[]) => api.post('/teacher/term-marks/upload', { marks }),
-    getTermMarks: (classId: number, term: string, subject: string) =>
-        api.get(`/teacher/term-marks/${classId}/${term}/${encodeURIComponent(subject)}`),
+    getTermMarks: (classId: number, term: string, subjectId: number) =>
+        api.get(`/teacher/term-marks/${classId}/${term}/${subjectId}`),
     // Question Bank
     getQuestions: (filters?: any) => api.get('/teacher/question-bank', { params: filters }),
     createQuestion: (data: any) => api.post('/teacher/question-bank', data),

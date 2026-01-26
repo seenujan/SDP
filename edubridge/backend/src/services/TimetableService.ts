@@ -5,12 +5,14 @@ export class TimetableService {
     async getAllTimetable() {
         const [rows] = await pool.query(`
             SELECT 
-                t.id, t.class_id, t.subject, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                sub.subject_name as subject,
                 c.grade, c.section,
                 CONCAT(c.grade, ' ', c.section) as class_name,
                 te.full_name as teacher_name
             FROM timetable t
             JOIN classes c ON t.class_id = c.id
+            JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN teachers te ON t.teacher_id = te.user_id
             ORDER BY CAST(SUBSTRING(c.grade, 7) AS UNSIGNED), c.section, 
                 FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'),
@@ -23,11 +25,13 @@ export class TimetableService {
     async getTimetableByClass(classId: number) {
         const [rows] = await pool.query(`
             SELECT 
-                t.id, t.class_id, t.subject, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                sub.subject_name as subject,
                 c.grade, c.section,
                 te.full_name as teacher_name
             FROM timetable t
             JOIN classes c ON t.class_id = c.id
+            JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN teachers te ON t.teacher_id = te.user_id
             WHERE t.class_id = ?
             ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time
@@ -39,11 +43,13 @@ export class TimetableService {
     async getTimetableByTeacher(teacherId: number) {
         const [rows] = await pool.query(`
             SELECT 
-                t.id, t.class_id, t.subject, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                sub.subject_name as subject,
                 c.grade, c.section,
                 CONCAT(c.grade, ' ', c.section) as class_name
             FROM timetable t
             JOIN classes c ON t.class_id = c.id
+            JOIN subjects sub ON t.subject_id = sub.id
             WHERE t.teacher_id = ?
             ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time
         `, [teacherId]);
@@ -54,11 +60,13 @@ export class TimetableService {
     async getTimetableById(id: number) {
         const [rows]: any = await pool.query(`
             SELECT 
-                t.id, t.class_id, t.subject, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                sub.subject_name as subject,
                 c.grade, c.section,
                 te.full_name as teacher_name
             FROM timetable t
             JOIN classes c ON t.class_id = c.id
+            JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN teachers te ON t.teacher_id = te.user_id
             WHERE t.id = ?
         `, [id]);
@@ -68,12 +76,16 @@ export class TimetableService {
     // Create timetable entry
     async createTimetable(data: {
         classId: number;
-        subject: string;
+        subjectId: number;
         dayOfWeek: string;
         startTime: string;
         endTime: string;
         teacherId: number;
     }) {
+        // Check for conflicts
+        // ... (Conflicts check logic remains mostly same but using subjectId for insert)
+        // Actually conflicts don't check subject.
+
         // Check for conflicts (same class, same day, overlapping time)
         const [conflicts]: any = await pool.query(`
             SELECT id FROM timetable 
@@ -115,8 +127,8 @@ export class TimetableService {
         }
 
         const [result]: any = await pool.query(
-            'INSERT INTO timetable (class_id, subject, day_of_week, start_time, end_time, teacher_id) VALUES (?, ?, ?, ?, ?, ?)',
-            [data.classId, data.subject, data.dayOfWeek, data.startTime, data.endTime, data.teacherId]
+            'INSERT INTO timetable (class_id, subject_id, day_of_week, start_time, end_time, teacher_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [data.classId, data.subjectId, data.dayOfWeek, data.startTime, data.endTime, data.teacherId]
         );
 
         return { id: result.insertId, ...data };
@@ -125,7 +137,7 @@ export class TimetableService {
     // Update timetable entry
     async updateTimetable(id: number, data: {
         classId?: number;
-        subject?: string;
+        subjectId?: number;
         dayOfWeek?: string;
         startTime?: string;
         endTime?: string;
@@ -135,7 +147,7 @@ export class TimetableService {
         const values: any[] = [];
 
         if (data.classId) { updates.push('class_id = ?'); values.push(data.classId); }
-        if (data.subject) { updates.push('subject = ?'); values.push(data.subject); }
+        if (data.subjectId) { updates.push('subject_id = ?'); values.push(data.subjectId); }
         if (data.dayOfWeek) { updates.push('day_of_week = ?'); values.push(data.dayOfWeek); }
         if (data.startTime) { updates.push('start_time = ?'); values.push(data.startTime); }
         if (data.endTime) { updates.push('end_time = ?'); values.push(data.endTime); }
@@ -160,9 +172,10 @@ export class TimetableService {
     // Get teachers for dropdown
     async getTeachersForDropdown() {
         const [rows] = await pool.query(`
-            SELECT t.user_id as id, t.full_name, t.subject
+            SELECT t.user_id as id, t.full_name, s.subject_name as subject
             FROM teachers t
             JOIN users u ON t.user_id = u.id
+            LEFT JOIN subjects s ON t.subject_id = s.id
             ORDER BY t.full_name
         `);
         return rows;

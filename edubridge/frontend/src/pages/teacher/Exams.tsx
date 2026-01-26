@@ -40,12 +40,15 @@ const Exams = () => {
     const [step, setStep] = useState(1); // 1 = Basic Info, 2 = Select Questions
     const [editingExamId, setEditingExamId] = useState<number | null>(null);
 
+    // Dropdown data
+    const [classes, setClasses] = useState<any[]>([]);
+    const [subjects, setSubjects] = useState<any[]>([]);
+
     // Basic exam info
     const [formData, setFormData] = useState({
         title: '',
-        subject: '',
-        grade: '',
-        section: '',
+        subject_id: '',
+        class_id: '',
         exam_date: '',
         duration: 60,
     });
@@ -62,6 +65,7 @@ const Exams = () => {
 
     useEffect(() => {
         fetchExams();
+        fetchDropdowns();
     }, []);
 
     const fetchExams = async () => {
@@ -72,6 +76,19 @@ const Exams = () => {
             console.error('Failed to fetch exams:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDropdowns = async () => {
+        try {
+            const [classesRes, subjectsRes] = await Promise.all([
+                teacherAPI.getMyClasses(),
+                teacherAPI.getAllSubjects()
+            ]);
+            setClasses(classesRes.data);
+            setSubjects(subjectsRes.data);
+        } catch (error) {
+            console.error('Failed to fetch dropdowns:', error);
         }
     };
 
@@ -91,13 +108,27 @@ const Exams = () => {
         }
     }, [showModal, step, questionFilters]);
 
+    useEffect(() => {
+        if (subjects.length > 0) {
+            // Auto-select the first (and only) subject
+            setFormData(prev => ({ ...prev, subject_id: subjects[0].id.toString() }));
+        }
+    }, [subjects]);
+
     const handleNextStep = () => {
         if (step === 1) {
             // Validate basic info
-            if (!formData.title || !formData.subject || !formData.grade || !formData.exam_date) {
+            if (!formData.title || !formData.subject_id || !formData.class_id || !formData.exam_date) {
                 alert('Please fill all required fields');
                 return;
             }
+
+            // Auto-filter questions by the selected exam subject
+            const selectedSubject = subjects.find(s => s.id.toString() === formData.subject_id);
+            if (selectedSubject) {
+                setQuestionFilters(prev => ({ ...prev, subject: selectedSubject.subject_name }));
+            }
+
             setStep(2);
         }
     };
@@ -140,7 +171,11 @@ const Exams = () => {
 
         try {
             const examData = {
-                ...formData,
+                title: formData.title,
+                class_id: parseInt(formData.class_id),
+                subject_id: parseInt(formData.subject_id),
+                exam_date: formData.exam_date,
+                duration: formData.duration,
                 total_marks: getTotalMarks()
             };
 
@@ -188,9 +223,8 @@ const Exams = () => {
     const resetForm = () => {
         setFormData({
             title: '',
-            subject: '',
-            grade: '',
-            section: '',
+            subject_id: '', // Will be reset by useEffect
+            class_id: '',
             exam_date: '',
             duration: 60,
         });
@@ -213,11 +247,11 @@ const Exams = () => {
             const examDetails = response.data;
 
             // Set basic form data
+            // examDetails should include class_id and subject_id from the backend select e.*
             setFormData({
                 title: examDetails.title,
-                subject: examDetails.subject,
-                grade: examDetails.grade,
-                section: examDetails.section || '',
+                subject_id: examDetails.subject_id.toString(),
+                class_id: examDetails.class_id.toString(),
                 exam_date: examDetails.exam_date.split('T')[0], // Convert to YYYY-MM-DD format
                 duration: examDetails.duration,
             });
@@ -449,73 +483,34 @@ const Exams = () => {
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Subject *
                                                 </label>
-                                                <select
-                                                    required
-                                                    value={formData.subject}
-                                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                                >
-                                                    <option value="">Select Subject</option>
-                                                    <option value="Mathematics">Mathematics</option>
-                                                    <option value="English">English</option>
-                                                    <option value="Science">Science</option>
-                                                    <option value="Physics">Physics</option>
-                                                    <option value="Chemistry">Chemistry</option>
-                                                    <option value="Biology">Biology</option>
-                                                    <option value="History">History</option>
-                                                    <option value="Geography">Geography</option>
-                                                    <option value="Computer Science">Computer Science</option>
-                                                    <option value="Physical Education">Physical Education</option>
-                                                    <option value="Art">Art</option>
-                                                    <option value="Music">Music</option>
-                                                </select>
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={subjects.find(s => s.id.toString() === formData.subject_id)?.subject_name || 'Loading...'}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                                                />
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Grade *
+                                                    Class *
                                                 </label>
                                                 <select
                                                     required
-                                                    value={formData.grade}
-                                                    onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                                                    value={formData.class_id}
+                                                    onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                                                 >
-                                                    <option value="">Select Grade</option>
-                                                    <option value="Grade 1">Grade 1</option>
-                                                    <option value="Grade 2">Grade 2</option>
-                                                    <option value="Grade 3">Grade 3</option>
-                                                    <option value="Grade 4">Grade 4</option>
-                                                    <option value="Grade 5">Grade 5</option>
-                                                    <option value="Grade 6">Grade 6</option>
-                                                    <option value="Grade 7">Grade 7</option>
-                                                    <option value="Grade 8">Grade 8</option>
-                                                    <option value="Grade 9">Grade 9</option>
-                                                    <option value="Grade 10">Grade 10</option>
-                                                    <option value="Grade 11">Grade 11</option>
-                                                    <option value="Grade 12">Grade 12</option>
-                                                    <option value="Grade 13">Grade 13</option>
+                                                    <option value="">Select Class</option>
+                                                    {classes.map((cls) => (
+                                                        <option key={cls.id} value={cls.id}>
+                                                            {cls.class_name} ({cls.student_count || 0} students)
+                                                        </option>
+                                                    ))}
                                                 </select>
                                             </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Section
-                                                </label>
-                                                <select
-                                                    value={formData.section}
-                                                    onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                                >
-                                                    <option value="">Select Section (Optional)</option>
-                                                    <option value="A">A</option>
-                                                    <option value="B">B</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Exam Date *
@@ -528,6 +523,9 @@ const Exams = () => {
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                                                 />
                                             </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Duration (minutes) *
@@ -555,15 +553,15 @@ const Exams = () => {
                                                 <select
                                                     value={questionFilters.subject}
                                                     onChange={(e) => setQuestionFilters({ ...questionFilters, subject: e.target.value })}
-                                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-gray-100"
+                                                    disabled={true}
                                                 >
                                                     <option value="">All Subjects</option>
-                                                    <option value="Mathematics">Mathematics</option>
-                                                    <option value="English">English</option>
-                                                    <option value="Science">Science</option>
-                                                    <option value="Physics">Physics</option>
-                                                    <option value="Chemistry">Chemistry</option>
-                                                    <option value="Biology">Biology</option>
+                                                    {subjects.map((sub) => (
+                                                        <option key={sub.id} value={sub.subject_name}>
+                                                            {sub.subject_name}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                                 <select
                                                     value={questionFilters.difficulty_level}

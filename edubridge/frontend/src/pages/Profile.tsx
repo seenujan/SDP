@@ -21,11 +21,15 @@ const Profile = () => {
     const [saving, setSaving] = useState(false);
 
     // Profile form data
-    const [profileForm, setProfileForm] = useState({
+    const [profileForm, setProfileForm] = useState<{
+        fullName: string;
+        email: string;
+        phone: string;
+        dateOfBirth: string;
+    }>({
         fullName: '',
         email: '',
         phone: '',
-        subject: '',
         dateOfBirth: '',
     });
 
@@ -35,17 +39,22 @@ const Profile = () => {
         fetchProfile();
     }, []);
 
+
+
     const fetchProfile = async () => {
         try {
             const response = await profileAPI.getProfile();
-            setProfile(response.data);
+            const data = response.data;
+            setProfile(data);
+
             setProfileForm({
-                fullName: response.data.full_name || '',
-                email: response.data.email || '',
-                phone: response.data.phone || '',
-                subject: response.data.subject || '',
-                dateOfBirth: response.data.date_of_birth ? response.data.date_of_birth.split('T')[0] : '',
+                fullName: data.full_name || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                dateOfBirth: data.date_of_birth ? data.date_of_birth.split('T')[0] : '',
             });
+
+
         } catch (error) {
             console.error('Failed to fetch profile:', error);
             showMessage('error', 'Failed to load profile');
@@ -133,9 +142,9 @@ const Profile = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                                     <input
                                         type="text"
-                                        value={profileForm.subject}
-                                        onChange={(e) => setProfileForm({ ...profileForm, subject: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        value={profile?.subject || 'Not Assigned'}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                                        disabled
                                     />
                                 </div>
                             )}

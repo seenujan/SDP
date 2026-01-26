@@ -35,6 +35,9 @@ router.get('/classes/:classId/students', (req, res) => teacherController.getClas
 // Timetable
 router.get('/timetable', (req, res) => teacherController.getMyTimetable(req, res));
 
+// Subjects
+router.get('/subjects', (req, res) => teacherController.getAllSubjects(req, res));
+
 // Attendance History
 router.get('/attendance/history', (req, res) => teacherController.getAttendanceHistory(req, res));
 
@@ -56,7 +59,7 @@ router.get('/marks/:examId', (req, res) => teacherController.getMarksByExam(req,
 
 // Term Marks
 router.post('/term-marks/upload', (req, res) => teacherController.uploadTermMarks(req, res));
-router.get('/term-marks/:classId/:term/:subject', (req, res) => teacherController.getTermMarks(req, res));
+router.get('/term-marks/:classId/:term/:subjectId', (req, res) => teacherController.getTermMarks(req, res));
 
 // Question Bank
 router.get('/question-bank', (req, res) => teacherController.getQuestions(req, res));

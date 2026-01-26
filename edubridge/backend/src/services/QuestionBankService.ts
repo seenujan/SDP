@@ -5,7 +5,7 @@ interface Question {
     id?: number;
     question_text: string;
     question_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
-    subject: string;
+    subject_id: number;
     topic?: string;
     difficulty_level?: 'easy' | 'medium' | 'hard';
     marks: number;
@@ -18,30 +18,39 @@ interface Question {
 export class QuestionBankService {
     // Get all questions by teacher
     async getQuestionsByTeacher(teacherId: number, filters?: any): Promise<any[]> {
-        let query = `SELECT * FROM question_bank WHERE teacher_id = ?`;
+        let query = `
+            SELECT qb.*, s.subject_name as subject
+            FROM question_bank qb
+            JOIN subjects s ON qb.subject_id = s.id
+            WHERE qb.teacher_id = ?
+        `;
         const params: any[] = [teacherId];
 
-        if (filters?.subject) {
-            query += ' AND subject = ?';
+        if (filters?.subject_id) {
+            query += ' AND qb.subject_id = ?';
+            params.push(filters.subject_id);
+        } else if (filters?.subject) {
+            // Legacy or name support if needed, but ideally use ID
+            query += ' AND s.subject_name = ?';
             params.push(filters.subject);
         }
 
         if (filters?.topic) {
-            query += ' AND topic = ?';
+            query += ' AND qb.topic = ?';
             params.push(filters.topic);
         }
 
         if (filters?.difficulty_level) {
-            query += ' AND difficulty_level = ?';
+            query += ' AND qb.difficulty_level = ?';
             params.push(filters.difficulty_level);
         }
 
         if (filters?.question_type) {
-            query += ' AND question_type = ?';
+            query += ' AND qb.question_type = ?';
             params.push(filters.question_type);
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY qb.created_at DESC';
 
         const [questions] = await pool.query<RowDataPacket[]>(query, params);
 
@@ -55,7 +64,10 @@ export class QuestionBankService {
     // Get question by ID
     async getQuestionById(questionId: number): Promise<any> {
         const [questions] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM question_bank WHERE id = ?',
+            `SELECT qb.*, s.subject_name as subject
+             FROM question_bank qb
+             JOIN subjects s ON qb.subject_id = s.id
+             WHERE qb.id = ?`,
             [questionId]
         );
 
@@ -74,12 +86,12 @@ export class QuestionBankService {
 
         const [result] = await pool.query<ResultSetHeader>(
             `INSERT INTO question_bank 
-            (question_text, question_type, subject, topic, difficulty_level, marks, options, correct_answer, teacher_id)
+            (question_text, question_type, subject_id, topic, difficulty_level, marks, options, correct_answer, teacher_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 questionData.question_text,
                 questionData.question_type,
-                questionData.subject,
+                questionData.subject_id,
                 questionData.topic || null,
                 questionData.difficulty_level || 'medium',
                 questionData.marks,
@@ -105,9 +117,9 @@ export class QuestionBankService {
             updates.push('question_type = ?');
             values.push(questionData.question_type);
         }
-        if (questionData.subject !== undefined) {
-            updates.push('subject = ?');
-            values.push(questionData.subject);
+        if (questionData.subject_id !== undefined) {
+            updates.push('subject_id = ?');
+            values.push(questionData.subject_id);
         }
         if (questionData.topic !== undefined) {
             updates.push('topic = ?');
@@ -152,13 +164,15 @@ export class QuestionBankService {
     // Search questions
     async searchQuestions(teacherId: number, searchTerm: string): Promise<any[]> {
         const [questions] = await pool.query<RowDataPacket[]>(
-            `SELECT * FROM question_bank 
-            WHERE teacher_id = ? AND (
-                question_text LIKE ? OR 
-                subject LIKE ? OR 
-                topic LIKE ?
+            `SELECT qb.*, s.subject_name as subject
+            FROM question_bank qb
+            JOIN subjects s ON qb.subject_id = s.id
+            WHERE qb.teacher_id = ? AND (
+                qb.question_text LIKE ? OR 
+                s.subject_name LIKE ? OR 
+                qb.topic LIKE ?
             )
-            ORDER BY created_at DESC`,
+            ORDER BY qb.created_at DESC`,
             [teacherId, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]
         );
 
@@ -170,8 +184,21 @@ export class QuestionBankService {
 
     // Get questions by subject
     async getQuestionsBySubject(teacherId: number, subject: string): Promise<any[]> {
+        // Assume 'subject' parameter might be ID or Name.
+        // Ideally we should use ID. But for backward compatibility let's handle name if string provided.
+        // Actually, let's assume it's subject NAME for now as frontend filtering often uses names unless we change it.
+        // Wait, current frontend uses names.
+        // But we want to use ID.
+
+        // Use ID if number, join if string
+        // Actually simplest is join and filter by subject_name = ?
+
         const [questions] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM question_bank WHERE teacher_id = ? AND subject = ? ORDER BY created_at DESC',
+            `SELECT qb.*, s.subject_name as subject
+             FROM question_bank qb
+             JOIN subjects s ON qb.subject_id = s.id
+             WHERE qb.teacher_id = ? AND s.subject_name = ? 
+             ORDER BY qb.created_at DESC`,
             [teacherId, subject]
         );
 

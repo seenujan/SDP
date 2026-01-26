@@ -6,9 +6,31 @@ import { announcementService, eventService } from '../services/AnnouncementServi
 import { studentPortfolioService } from '../services/StudentPortfolioService';
 import certificateService from '../services/CertificateService';
 import { reportService } from '../services/ReportService';
+import { subjectService } from '../services/SubjectService';
 
 export class AdminController {
     // User Management
+    async toggleUserStatus(req: AuthRequest, res: Response) {
+        try {
+            const userId = parseInt(req.params.id);
+            // Default to true (activate) if not provided, or toggle existing? 
+            // Better to expect a target status or just toggle.
+            // Let's implement toggle.
+            // First get current status
+            const user = await userService.getUserById(userId);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const newStatus = !user.active;
+            await userService.updateUser(userId, { active: newStatus });
+
+            res.json({ success: true, active: newStatus, message: `User ${newStatus ? 'activated' : 'deactivated'} successfully` });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async createParent(req: AuthRequest, res: Response) {
         try {
             const { email, fullName, phone } = req.body;
@@ -56,9 +78,9 @@ export class AdminController {
 
     async createTeacher(req: AuthRequest, res: Response) {
         try {
-            const { email, fullName, subject } = req.body;
+            const { email, fullName, subjectId } = req.body;
 
-            if (!email || !fullName || !subject) {
+            if (!email || !fullName || !subjectId) {
                 return res.status(400).json({ error: 'Email, Full Name, and Subject are required' });
             }
 
@@ -66,7 +88,7 @@ export class AdminController {
                 email,
                 role: 'teacher',
                 fullName,
-                additionalData: { subject }
+                additionalData: { subjectId }
             });
             res.status(201).json(user);
         } catch (error: any) {
@@ -181,6 +203,16 @@ export class AdminController {
         }
     }
 
+    // Get all subjects
+    async getSubjects(req: AuthRequest, res: Response) {
+        try {
+            const subjects = await subjectService.getAllSubjects();
+            res.json(subjects);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // Get sections for a grade
     async getSectionsForGrade(req: AuthRequest, res: Response) {
         try {
@@ -266,8 +298,7 @@ export class AdminController {
 
             const certificate = await certificateService.createCertificate({
                 studentId: req.body.studentId,
-                certificateType: req.body.certificateType,
-                title: req.body.title,
+                certificateTypeId: req.body.certificateTypeId,
                 description: req.body.description,
                 issueDate: req.body.issueDate,
                 issuedBy: req.user.id
@@ -282,6 +313,15 @@ export class AdminController {
     }
 
     // Delete certificate
+    async getCertificateTypes(req: AuthRequest, res: Response) {
+        try {
+            const types = await certificateService.getCertificateTypes();
+            res.json(types);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async deleteCertificate(req: AuthRequest, res: Response) {
         try {
             const id = parseInt(req.params.id);

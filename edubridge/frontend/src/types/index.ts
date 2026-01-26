@@ -46,8 +46,11 @@ export interface Assignment {
     title: string;
     description: string;
     due_date: string;
+    class_id?: number;
+    subject_id?: number;
     subject: string;
     grade: string;
+    section?: string;
     assignment_file_url: string;
     created_by: number;
     created_at: string;
@@ -72,6 +75,8 @@ export interface Attendance {
     student_id: number;
     status: 'present' | 'absent' | 'late';
     date: string;
+    class_id?: number;
+    subject_id?: number;
     class?: string;
     subject?: string;
 }

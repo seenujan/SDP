@@ -50,8 +50,9 @@ export class ReportService {
         console.log('[ReportService] Generating Exam Report', { grade, examId });
         let query = `
             SELECT 
+                e.id,
                 e.title as exam_title,
-                e.subject,
+                sub.subject_name as subject,
                 e.exam_date,
                 c.grade,
                 c.section,
@@ -61,7 +62,8 @@ export class ReportService {
                 COALESCE(MAX(sea.total_score), 0) as highest_score,
                 COALESCE(MIN(sea.total_score), 0) as lowest_score
             FROM exams e
-            JOIN classes c ON e.grade = c.grade
+            JOIN classes c ON e.class_id = c.id
+            JOIN subjects sub ON e.subject_id = sub.id
             JOIN students s ON s.class_id = c.id
             LEFT JOIN student_exam_attempts sea ON s.id = sea.student_id AND e.id = sea.exam_id 
                 AND (sea.status = 'submitted' OR sea.status = 'evaluated' OR sea.status = 'graded')
@@ -85,7 +87,7 @@ export class ReportService {
         }
 
         // Included extra fields in GROUP BY for strict mode compliance
-        query += ` GROUP BY e.id, e.title, e.subject, e.exam_date, c.grade, c.section ORDER BY e.exam_date DESC, c.grade, c.section`;
+        query += ` GROUP BY e.id, e.title, sub.subject_name, e.exam_date, c.grade, c.section ORDER BY e.exam_date DESC, c.grade, c.section`;
 
         const [rows]: any = await pool.query(query, params);
         return rows;

@@ -23,6 +23,7 @@ const TermMarks = () => {
     const [classes, setClasses] = useState<any[]>([]);
     const [selectedClass, setSelectedClass] = useState<any>(null);
     const [teacherSubject, setTeacherSubject] = useState<string>('');
+    const [teacherSubjectId, setTeacherSubjectId] = useState<number | null>(null);
     const [selectedTerm, setSelectedTerm] = useState<string>('');
 
     useEffect(() => {
@@ -34,6 +35,7 @@ const TermMarks = () => {
         try {
             const response = await profileAPI.getProfile();
             setTeacherSubject(response.data.subject || '');
+            setTeacherSubjectId(response.data.subject_id || null);
         } catch (error) {
             console.error('Failed to fetch teacher profile:', error);
         }
@@ -60,17 +62,17 @@ const TermMarks = () => {
 
             // Try to fetch existing term marks
             let existingMarks: any[] = [];
-            if (selectedTerm && teacherSubject) {
+            if (selectedTerm && teacherSubjectId) {
                 try {
                     const marksResponse = await teacherAPI.getTermMarks(
                         classId,
                         selectedTerm,
-                        teacherSubject
+                        teacherSubjectId
                     );
                     existingMarks = marksResponse.data;
                 } catch (error) {
                     // No existing marks, that's okay
-                    console.log('No existing marks found');
+                    console.log('No existing marks found', error);
                 }
             }
 
@@ -114,7 +116,7 @@ const TermMarks = () => {
     };
 
     const handleSubmitTermMarks = async () => {
-        if (!selectedClass || !selectedTerm || !teacherSubject) {
+        if (!selectedClass || !selectedTerm || !teacherSubjectId) {
             alert('Please select class and term');
             return;
         }
@@ -127,7 +129,7 @@ const TermMarks = () => {
             const marksData = markEntries.map((entry) => ({
                 student_id: entry.student_id,
                 teacher_id: teacherId,
-                subject: teacherSubject,
+                subject_id: teacherSubjectId, // Use subject_id
                 term: selectedTerm,
                 marks: entry.marks_obtained,
                 feedback: entry.remarks,
