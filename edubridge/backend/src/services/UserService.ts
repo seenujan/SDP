@@ -15,6 +15,7 @@ export class UserService {
         try {
             await connection.beginTransaction();
 
+
             // Insert into users table
             // Password can be null (for admin-created accounts) or provided (for legacy/seed)
             // Active is 0 by default for admin-created (unless password provided, then maybe active?)
@@ -76,8 +77,8 @@ export class UserService {
                 );
             } else if (userData.role === 'teacher') {
                 await connection.query(
-                    'INSERT INTO teachers (user_id, full_name, subject) VALUES (?, ?, ?)',
-                    [userId, userData.fullName, userData.additionalData?.subject || '']
+                    'INSERT INTO teachers (user_id, full_name, subject_id) VALUES (?, ?, ?)',
+                    [userId, userData.fullName, userData.additionalData?.subjectId || null]
                 );
             } else if (userData.role === 'parent') {
                 await connection.query(

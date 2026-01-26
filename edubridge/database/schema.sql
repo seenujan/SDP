@@ -323,8 +323,6 @@ CREATE TABLE student_exam_answers (
   question_id INT NOT NULL,
   selected_option VARCHAR(255),
   text_answer TEXT,
-  is_correct TINYINT(1),
-  marks_awarded DECIMAL(10,2) DEFAULT 0.00,
   FOREIGN KEY (attempt_id) REFERENCES student_exam_attempts(id) ON DELETE CASCADE,
   FOREIGN KEY (question_id) REFERENCES question_bank(id) ON DELETE CASCADE
 );

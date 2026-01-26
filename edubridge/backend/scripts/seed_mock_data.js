@@ -36,9 +36,24 @@ async function seedData() {
                     [email, name, 'teacher']
                 );
                 userId = res.insertId;
+
+                // Lookup subject ID
+                const [subjRows] = await connection.query(
+                    'SELECT id FROM subjects WHERE subject_name = ?',
+                    [subject.toLowerCase()]
+                );
+
+                let subjectId = null;
+                if (subjRows.length > 0) {
+                    subjectId = subjRows[0].id;
+                } else {
+                    const [subjRes] = await connection.query('INSERT INTO subjects (subject_name) VALUES (?)', [subject.toLowerCase()]);
+                    subjectId = subjRes.insertId;
+                }
+
                 await connection.query(
-                    'INSERT INTO teachers (user_id, full_name, subject, qualification) VALUES (?, ?, ?, ?)',
-                    [userId, name, subject, 'B.Ed']
+                    'INSERT INTO teachers (user_id, full_name, subject_id, qualification) VALUES (?, ?, ?, ?)',
+                    [userId, name, subjectId, 'B.Ed']
                 );
                 console.log(`Created Teacher: ${name}`);
             } else {

@@ -178,29 +178,19 @@ export class StudentController {
             // Let's rely on a new service method or direct query for now, but cleaner to use service.
             // Let's actually Fetch the full attempt details including answers and correctness.
 
-            const attemptId = attempts[0].id;
+            // Use the centralized service logic that handles dynamic marking (3NF)
+            const result = await examService.getStudentAttemptDetails(attempts[0].id);
 
-            // Get attempt details
-            const [attemptRows]: any = await pool.query('SELECT * FROM student_exam_attempts WHERE id = ?', [attemptId]);
-            const attempt = attemptRows[0];
+            // Fetch exam details to complete the response structure expected by frontend
+            // verification: getStudentAttemptDetails returns { attempt, student, answers }
+            // The frontend expects { exam, attempt, answers }
 
-            // Get answers with correctness
-            const [answers]: any = await pool.query(
-                `SELECT sea.*, qb.question_text, qb.question_type, qb.options, qb.correct_answer as model_answer, qb.marks as max_marks
-                 FROM student_exam_answers sea
-                 JOIN question_bank qb ON sea.question_id = qb.id
-                 WHERE sea.attempt_id = ?`,
-                [attemptId]
-            );
-
-            // Get Exam Details
             const [examRows]: any = await pool.query('SELECT * FROM exams WHERE id = ?', [parseInt(req.params.id)]);
-
 
             res.json({
                 exam: examRows[0],
-                attempt: attempt,
-                answers: answers
+                attempt: result.attempt,
+                answers: result.answers
             });
 
         } catch (error: any) {

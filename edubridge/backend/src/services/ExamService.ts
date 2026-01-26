@@ -449,6 +449,7 @@ class ExamService {
                 if (question.correct_answer) {
                     const keywords = question.correct_answer.split(',').map((k: string) => k.trim().toLowerCase());
                     const studentText = (ans.text_answer || '').toLowerCase();
+
                     if (keywords.some((k: string) => studentText.includes(k))) {
                         isCorrect = true;
                         marks = question.marks;
@@ -460,11 +461,8 @@ class ExamService {
                 totalScore += marks;
             }
 
-            // Update answer row
-            await pool.execute(
-                'UPDATE student_exam_answers SET is_correct = ?, marks_awarded = ? WHERE id = ?',
-                [isCorrect, marks, ans.id]
-            );
+            // Logic to update derived columns removed for 3NF
+            // student_exam_answers no longer stores is_correct or marks_awarded
         }
 
         // Update attempt
@@ -526,7 +524,7 @@ class ExamService {
         const student = studentRows[0];
 
         // Get answers with correctness and question details
-        const [answers] = await pool.query(
+        const [answers] = await pool.query<RowDataPacket[]>(
             `SELECT sea.*, qb.question_text, qb.question_type, qb.options, qb.correct_answer as model_answer, qb.marks as max_marks
              FROM student_exam_answers sea
              JOIN question_bank qb ON sea.question_id = qb.id
@@ -534,10 +532,37 @@ class ExamService {
             [attemptId]
         );
 
+        // Calculate correctness and marks on the fly (3NF)
+        const detailedAnswers = answers.map((ans: any) => {
+            let isCorrect = false;
+            let marksAwarded = 0;
+
+            if (ans.question_type === 'multiple_choice' || ans.question_type === 'true_false') {
+                if (ans.selected_option === ans.model_answer) {
+                    isCorrect = true;
+                    marksAwarded = ans.max_marks;
+                }
+            } else if (ans.question_type === 'short_answer' && ans.model_answer) {
+                const keywords = ans.model_answer.split(',').map((k: string) => k.trim().toLowerCase());
+                const studentText = (ans.text_answer || '').toLowerCase();
+
+                if (keywords.some((k: string) => studentText.includes(k))) {
+                    isCorrect = true;
+                    marksAwarded = ans.max_marks;
+                }
+            }
+
+            return {
+                ...ans,
+                is_correct: isCorrect,
+                marks_awarded: marksAwarded
+            };
+        });
+
         return {
             attempt,
             student,
-            answers
+            answers: detailedAnswers
         };
     }
 }

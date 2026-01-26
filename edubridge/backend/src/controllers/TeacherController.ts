@@ -388,7 +388,7 @@ export class TeacherController {
     // Question Bank
     async getQuestions(req: AuthRequest, res: Response) {
         try {
-            const questions = await questionBankService.getQuestionsByTeacher(
+            const questions = await questionBankService.getAllQuestions(
                 req.user!.id,
                 req.query
             );
@@ -414,7 +414,8 @@ export class TeacherController {
         try {
             const question = await questionBankService.updateQuestion(
                 parseInt(req.params.id),
-                req.body
+                req.body,
+                req.user!.id
             );
             res.json(question);
         } catch (error: any) {
@@ -424,7 +425,7 @@ export class TeacherController {
 
     async deleteQuestion(req: AuthRequest, res: Response) {
         try {
-            await questionBankService.deleteQuestion(parseInt(req.params.id));
+            await questionBankService.deleteQuestion(parseInt(req.params.id), req.user!.id);
             res.json({ message: 'Question deleted successfully' });
         } catch (error: any) {
             res.status(500).json({ error: error.message });

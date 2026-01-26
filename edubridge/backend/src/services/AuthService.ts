@@ -123,9 +123,9 @@ export class AuthService {
                 [hashedPassword, user_id]
             );
 
-            // Delete token
+            // Mark token as used
             await connection.query(
-                'DELETE FROM activation_tokens WHERE token = ?',
+                'UPDATE activation_tokens SET is_used = 1, used_at = NOW() WHERE token = ?',
                 [token]
             );
 
@@ -143,7 +143,7 @@ export class AuthService {
         const connection = await pool.getConnection();
         try {
             const [tokenRows]: any = await connection.query(
-                `SELECT u.email 
+                `SELECT u.email, t.is_used 
                  FROM activation_tokens t
                  JOIN users u ON t.user_id = u.id
                  WHERE t.token = ?`,
@@ -163,6 +163,12 @@ export class AuthService {
 
             // We could also check expiry here if we want to be strict before they try to submit
             // But main purpose is to get email.
+
+            // Start checking is_used here for better UX, or let activateAccount fail? 
+            // For verification feedback, it's better to know if it's already used.
+            if (tokenRows[0].is_used === 1) {
+                throw new Error('This activation link has already been used');
+            }
 
             return { valid: true, email: tokenRows[0].email };
         } finally {
@@ -187,8 +193,12 @@ export class AuthService {
         try {
             await connection.beginTransaction();
 
-            // Delete existing reset tokens for this user
-            await connection.query('DELETE FROM password_resets WHERE user_id = ?', [user.id]);
+            // We keep existing reset history now. 
+            // But we might want to invalidate pending ones? 
+            // The requirement "history" implies keeping records. 
+            // Let's just INSERT a new one. The old ones will expire or stay unused.
+            // If strict security needed, we could mark previous PENDING ones as used/cancelled,
+            // but simply inserting a new one is fine as long as we validate properly.
 
             // Save new token
             await connection.query(
@@ -226,7 +236,11 @@ export class AuthService {
                 throw new Error('Invalid or expired password reset token');
             }
 
-            const { user_id, expires_at } = rows[0];
+            const { user_id, expires_at, is_used } = rows[0];
+
+            if (is_used === 1) {
+                throw new Error('This password reset link has already been used');
+            }
 
             if (new Date() > new Date(expires_at)) {
                 throw new Error('Password reset token has expired');
@@ -241,9 +255,9 @@ export class AuthService {
                 [hashedPassword, user_id]
             );
 
-            // Delete token
+            // Mark token as used
             await connection.query(
-                'DELETE FROM password_resets WHERE token = ?',
+                'UPDATE password_resets SET is_used = 1, used_at = NOW() WHERE token = ?',
                 [token]
             );
 

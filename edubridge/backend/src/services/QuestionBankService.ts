@@ -16,21 +16,20 @@ interface Question {
 }
 
 export class QuestionBankService {
-    // Get all questions by teacher
-    async getQuestionsByTeacher(teacherId: number, filters?: any): Promise<any[]> {
+    // Get all questions (visible to all teachers)
+    async getAllQuestions(requestingUserId: number, filters?: any): Promise<any[]> {
         let query = `
             SELECT qb.*, s.subject_name as subject
             FROM question_bank qb
             JOIN subjects s ON qb.subject_id = s.id
-            WHERE qb.teacher_id = ?
+            WHERE 1=1
         `;
-        const params: any[] = [teacherId];
+        const params: any[] = [];
 
         if (filters?.subject_id) {
             query += ' AND qb.subject_id = ?';
             params.push(filters.subject_id);
         } else if (filters?.subject) {
-            // Legacy or name support if needed, but ideally use ID
             query += ' AND s.subject_name = ?';
             params.push(filters.subject);
         }
@@ -54,10 +53,11 @@ export class QuestionBankService {
 
         const [questions] = await pool.query<RowDataPacket[]>(query, params);
 
-        // Parse options JSON for each question
+        // Parse options and add ownership flag
         return questions.map(q => ({
             ...q,
-            options: q.options ? JSON.parse(q.options) : null
+            options: q.options ? JSON.parse(q.options) : null,
+            is_owner: q.teacher_id === requestingUserId
         }));
     }
 
@@ -105,7 +105,16 @@ export class QuestionBankService {
     }
 
     // Update question
-    async updateQuestion(questionId: number, questionData: Partial<Question>): Promise<any> {
+    async updateQuestion(questionId: number, questionData: Partial<Question>, requestingUserId: number): Promise<any> {
+        // Verify ownership
+        const currentQuestion = await this.getQuestionById(questionId);
+        if (!currentQuestion) {
+            throw new Error('Question not found');
+        }
+        if (currentQuestion.teacher_id !== requestingUserId) {
+            throw new Error('Access denied: You can only edit your own questions');
+        }
+
         const updates: string[] = [];
         const values: any[] = [];
 
@@ -157,7 +166,16 @@ export class QuestionBankService {
     }
 
     // Delete question
-    async deleteQuestion(questionId: number): Promise<void> {
+    async deleteQuestion(questionId: number, requestingUserId: number): Promise<void> {
+        // Verify ownership
+        const currentQuestion = await this.getQuestionById(questionId);
+        if (!currentQuestion) {
+            throw new Error('Question not found');
+        }
+        if (currentQuestion.teacher_id !== requestingUserId) {
+            throw new Error('Access denied: You can only delete your own questions');
+        }
+
         await pool.query('DELETE FROM question_bank WHERE id = ?', [questionId]);
     }
 

@@ -14,6 +14,7 @@ interface Question {
     options?: string[];
     correct_answer?: string;
     created_at: string;
+    is_owner?: boolean;
 }
 
 const QuestionBank = () => {
@@ -321,20 +322,24 @@ const QuestionBank = () => {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex space-x-2 ml-4">
-                                        <button
-                                            onClick={() => handleEdit(question)}
-                                            className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(question.id)}
-                                            className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+                                    {question.is_owner && (
+                                        <div className="flex space-x-2 ml-4">
+                                            <button
+                                                onClick={() => handleEdit(question)}
+                                                className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"
+                                                title="Edit Question"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(question.id)}
+                                                className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
+                                                title="Delete Question"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
