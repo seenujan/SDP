@@ -18,6 +18,7 @@ import AdminStudentPortfolio from './pages/admin/StudentPortfolio';
 import Certificates from './pages/admin/Certificates';
 import ProgressCard from './pages/admin/ProgressCard';
 import Reports from './pages/admin/Reports';
+import Scholarships from './pages/admin/Scholarships';
 
 // Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -141,6 +142,14 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="admin">
                                 <ProgressCard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/scholarships"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <Scholarships />
                             </ProtectedRoute>
                         }
                     />

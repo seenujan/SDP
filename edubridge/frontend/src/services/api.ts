@@ -112,6 +112,8 @@ export const adminAPI = {
         api.get('/admin/reports/users', { params: { role, status } }),
     getPTMFeedbackReport: (startDate?: string, endDate?: string) =>
         api.get('/admin/reports/ptm-feedback', { params: { startDate, endDate } }),
+    getEligibleStudents: (filters: { incomeLimit?: number; maxRank?: number; grade?: string; search?: string }) =>
+        api.get('/admin/scholarships/eligible', { params: filters }),
     getSubjects: () => api.get('/admin/subjects'),
 };
 

@@ -424,6 +424,21 @@ export class AdminController {
         }
     }
 
+    async getEligibleStudents(req: AuthRequest, res: Response) {
+        try {
+            const { incomeLimit, maxRank, grade, search } = req.query;
+            const students = await reportService.getScholarshipEligibleStudents({
+                incomeLimit: incomeLimit ? Number(incomeLimit) : undefined,
+                maxRank: maxRank ? Number(maxRank) : undefined,
+                grade: grade as string,
+                search: search as string
+            });
+            res.json(students);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async getPTMFeedbackReport(req: AuthRequest, res: Response) {
         try {
             const { startDate, endDate } = req.query;

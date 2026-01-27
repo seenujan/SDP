@@ -148,6 +148,87 @@ export class ReportService {
         return rows;
     }
 
+    // Get Scholarship Eligible Students
+    async getScholarshipEligibleStudents(filters: {
+        incomeLimit?: number;
+        maxRank?: number;
+        grade?: string;
+        search?: string;
+    }) {
+        console.log('[ReportService] Fetching eligible students with rank', filters);
+
+        let query = `
+            WITH StudentMarks AS (
+                SELECT 
+                    tm.student_id,
+                    AVG(tm.marks) as avg_mark -- Calculate average mark directly
+                FROM term_marks tm
+                GROUP BY tm.student_id
+            ),
+            StudentRanks AS (
+                SELECT 
+                    s.id as student_id,
+                    s.class_id,
+                    RANK() OVER (PARTITION BY s.class_id ORDER BY COALESCE(sm.avg_mark, 0) DESC) as class_rank
+                FROM students s
+                LEFT JOIN StudentMarks sm ON s.id = sm.student_id
+            )
+            SELECT 
+                s.id,
+                s.full_name as name,
+                c.grade,
+                c.section,
+                p.annual_income as parentIncome,
+                sr.class_rank,
+                CASE 
+                    WHEN exists_sch.id IS NOT NULL THEN 'Awarded'
+                    ELSE 'Eligible'
+                END as status
+            FROM students s
+            JOIN classes c ON s.class_id = c.id
+            JOIN StudentRanks sr ON s.id = sr.student_id
+            LEFT JOIN parents p ON s.parent_id = p.user_id 
+            LEFT JOIN scholarships exists_sch ON s.id = exists_sch.student_id
+        `;
+
+        const params: any[] = [];
+        const conditions: string[] = [];
+
+        if (filters.grade) {
+            conditions.push('c.grade = ?');
+            params.push(filters.grade);
+        }
+
+        if (filters.incomeLimit) {
+            conditions.push('p.annual_income <= ?');
+            params.push(filters.incomeLimit);
+        }
+
+        if (filters.maxRank) {
+            conditions.push('sr.class_rank <= ?');
+            params.push(filters.maxRank);
+        }
+
+        if (filters.search) {
+            conditions.push('s.full_name LIKE ?');
+            params.push(`%${filters.search}%`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY sr.class_rank ASC, p.annual_income ASC LIMIT 100';
+
+        const [rows]: any = await pool.query(query, params);
+
+        return rows.map((row: any) => ({
+            ...row,
+            class_rank: Number(row.class_rank),
+            status: row.status
+        }));
+    }
+
     // Get Scholarship Report
     async getScholarshipReport(startDate?: string, endDate?: string) {
         console.log('[ReportService] Generating Scholarship Report', { startDate, endDate });

@@ -39,6 +39,7 @@ const Sidebar = () => {
                     { icon: Briefcase, label: 'Student Portfolio', path: '/admin/student-portfolio' },
                     { icon: Award, label: 'Certificates', path: '/admin/certificates' },
                     { icon: TrendingUp, label: 'Progress Card Generation', path: '/admin/progress-card' },
+                    { icon: BookOpen, label: 'Scholarships', path: '/admin/scholarships' },
                     { icon: BarChart3, label: 'Reports', path: '/admin/reports' },
                 ];
             case 'teacher':
