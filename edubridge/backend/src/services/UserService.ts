@@ -1,6 +1,8 @@
 import { pool } from '../config/database';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { emailService } from './EmailService';
+import { validatePassword } from '../utils/validators';
 
 export class UserService {
     // Create a new user with role-specific data
@@ -20,8 +22,13 @@ export class UserService {
             // Password can be null (for admin-created accounts) or provided (for legacy/seed)
             // Active is 0 by default for admin-created (unless password provided, then maybe active?)
             // If password is NULL, active MUST be 0.
-            const password = userData.password || null;
+            let password = userData.password || null;
             const active = userData.password ? 1 : 0; // If password provided (e.g. seed), assume active. If not, inactive.
+
+            if (password) {
+                validatePassword(password);
+                password = await bcrypt.hash(password, 10);
+            }
 
             const [userResult]: any = await connection.query(
                 'INSERT INTO users (email, password, role, active) VALUES (?, ?, ?, ?)',
@@ -192,8 +199,9 @@ export class UserService {
                     values.push(userData.email);
                 }
                 if (userData.password) {
+                    validatePassword(userData.password);
                     updates.push('password = ?');
-                    values.push(userData.password);
+                    values.push(await bcrypt.hash(userData.password, 10));
                 }
                 if (userData.active !== undefined) {
                     updates.push('active = ?');
@@ -435,13 +443,30 @@ export class UserService {
 
             if (userRows.length === 0) throw new Error('User not found');
 
-            // Plain text password comparison (to match existing DB)
-            if (userRows[0].password !== currentPassword) {
+            // Verify current password (handle both plain text and bcrypt for backward compatibility)
+            // Ideally we should move everyone to bcrypt, but for now we check both.
+            let isPasswordValid = false;
+
+            if (userRows[0].password.startsWith('$2')) {
+                isPasswordValid = await bcrypt.compare(currentPassword, userRows[0].password);
+            } else {
+                isPasswordValid = userRows[0].password === currentPassword;
+                // Optional: Upgrade password if it matches plain text? 
+                // We will do that when we save the new one anyway.
+            }
+
+            if (!isPasswordValid) {
                 throw new Error('Current password is incorrect');
             }
 
-            // Update password (plain text to match existing DB)
-            await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+            // Validate new password rules
+            validatePassword(newPassword);
+
+            // Hash new password
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Update password
+            await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
 
             return { success: true, message: 'Password changed successfully' };
         } finally {

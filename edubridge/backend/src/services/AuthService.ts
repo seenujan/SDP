@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/environment';
 import crypto from 'crypto';
 import { emailService } from './EmailService';
+import { validatePassword } from '../utils/validators';
 
 export class AuthService {
     // Login user
@@ -113,6 +114,9 @@ export class AuthService {
             if (new Date() > new Date(expires_at)) {
                 throw new Error('Activation token has expired');
             }
+
+            // Validate password
+            validatePassword(password);
 
             // Hash new password
             const hashedPassword = await this.hashPassword(password);
@@ -245,6 +249,9 @@ export class AuthService {
             if (new Date() > new Date(expires_at)) {
                 throw new Error('Password reset token has expired');
             }
+
+            // Validate password
+            validatePassword(password);
 
             // Hash new password
             const hashedPassword = await this.hashPassword(password);
