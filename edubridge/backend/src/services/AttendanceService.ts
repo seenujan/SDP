@@ -1,4 +1,5 @@
 import { pool } from '../config/database';
+import { notificationService } from './NotificationService';
 
 export class AttendanceService {
     // Mark attendance for a student
@@ -14,21 +15,32 @@ export class AttendanceService {
             [data.studentId, data.date, data.timetableId]
         );
 
+        let result;
         if (existing && existing.length > 0) {
             // Update existing record
-            const [result] = await pool.query(
+            [result] = await pool.query(
                 'UPDATE attendance SET status = ? WHERE id = ?',
                 [data.status, existing[0].id]
             );
-            return result;
         } else {
             // Insert new record
-            const [result] = await pool.query(
+            [result] = await pool.query(
                 'INSERT INTO attendance (student_id, status, date, timetable_id) VALUES (?, ?, ?, ?)',
                 [data.studentId, data.status, data.date, data.timetableId]
             );
-            return result;
         }
+
+        // Send notification if absent
+        if (data.status === 'absent') {
+            await notificationService.notifyStudentParents(
+                data.studentId,
+                'Attendance Alert: Absent',
+                `Your child has been marked absent for a class on ${data.date}.`,
+                'attendance'
+            );
+        }
+
+        return result;
     }
 
     // Mark attendance for multiple students at once
@@ -61,6 +73,19 @@ export class AttendanceService {
                         'INSERT INTO attendance (student_id, status, date, timetable_id) VALUES (?, ?, ?, ?)',
                         [data.studentId, data.status, data.date, data.timetableId]
                     );
+                }
+
+                // Send notification if absent
+                if (data.status === 'absent') {
+                    // Note: Ideally allow this to fail silently or handle outside transaction to not slow down
+                    // But for consistency we put it here. We use the service directly which uses the pool (separate connection)
+                    // This is fine.
+                    notificationService.notifyStudentParents(
+                        data.studentId,
+                        'Attendance Alert: Absent',
+                        `Your child has been marked absent for a class on ${data.date}.`,
+                        'attendance'
+                    ).catch(err => console.error('Notification failed', err));
                 }
             }
 

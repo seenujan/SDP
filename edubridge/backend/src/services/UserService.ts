@@ -84,8 +84,8 @@ export class UserService {
                 );
             } else if (userData.role === 'teacher') {
                 await connection.query(
-                    'INSERT INTO teachers (user_id, full_name, subject_id) VALUES (?, ?, ?)',
-                    [userId, userData.fullName, userData.additionalData?.subjectId || null]
+                    'INSERT INTO teachers (user_id, full_name, subject_id, phone) VALUES (?, ?, ?, ?)',
+                    [userId, userData.fullName, userData.additionalData?.subjectId || null, userData.additionalData?.phone || null]
                 );
             } else if (userData.role === 'parent') {
                 await connection.query(
@@ -139,7 +139,7 @@ export class UserService {
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 sub.subject_name as subject,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id,
-                p.phone
+                COALESCE(p.phone, t.phone) as phone
             FROM users u
             LEFT JOIN teachers t ON u.id = t.user_id
             LEFT JOIN subjects sub ON t.subject_id = sub.id
@@ -159,7 +159,7 @@ export class UserService {
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 sub.subject_name as subject, t.subject_id, t.id as teacher_id,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id, s.id as student_id,
-                p.phone, p.id as parent_id_record
+                COALESCE(p.phone, t.phone) as phone, p.id as parent_id_record
             FROM users u
             LEFT JOIN teachers t ON u.id = t.user_id
             LEFT JOIN subjects sub ON t.subject_id = sub.id
@@ -248,6 +248,7 @@ export class UserService {
 
                 if (userData.fullName) { updates.push('full_name = ?'); values.push(userData.fullName); }
                 if (userData.additionalData?.subjectId) { updates.push('subject_id = ?'); values.push(userData.additionalData.subjectId); }
+                if (userData.additionalData?.phone) { updates.push('phone = ?'); values.push(userData.additionalData.phone); }
 
                 if (updates.length > 0) {
                     values.push(id);
@@ -303,7 +304,7 @@ export class UserService {
     async getTeachers() {
         const [rows] = await pool.query(`
             SELECT 
-                t.id, t.user_id, t.full_name, t.subject_id, s.subject_name as subject,
+                t.id, t.user_id, t.full_name, t.phone, t.subject_id, s.subject_name as subject,
                 u.email, u.active, u.created_at
             FROM teachers t
             JOIN users u ON t.user_id = u.id
@@ -403,6 +404,7 @@ export class UserService {
 
                 if (profileData.fullName) { updates.push('full_name = ?'); values.push(profileData.fullName); }
                 if (profileData.subjectId) { updates.push('subject_id = ?'); values.push(profileData.subjectId); }
+                if (profileData.phone) { updates.push('phone = ?'); values.push(profileData.phone); }
 
                 if (updates.length > 0) {
                     values.push(userId);

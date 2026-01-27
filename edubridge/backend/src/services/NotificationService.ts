@@ -55,5 +55,21 @@ export const notificationService = {
             WHERE user_id = ?
         `;
         await db.query(query, [userId]);
+    },
+
+    async notifyStudentParents(studentId: number, title: string, message: string, type: 'attendance' | 'result' | 'system' = 'system') {
+        try {
+            // Find parent for this student
+            const query = `SELECT parent_id FROM students WHERE id = ?`;
+            const [rows]: any = await db.query(query, [studentId]);
+
+            if (rows.length > 0 && rows[0].parent_id) {
+                const parentId = rows[0].parent_id;
+                await this.createNotification(parentId, title, message, type);
+            }
+        } catch (error) {
+            console.error('Error notifying parent:', error);
+            // Don't block the main flow if notification fails
+        }
     }
 };

@@ -137,6 +137,18 @@ const Profile = () => {
                                 />
                             </div>
 
+                            {(profile?.role === 'parent' || profile?.role === 'teacher') && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <input
+                                        type="tel"
+                                        value={profileForm.phone}
+                                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    />
+                                </div>
+                            )}
+
                             {profile?.role === 'teacher' && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
@@ -145,18 +157,6 @@ const Profile = () => {
                                         value={profile?.subject || 'Not Assigned'}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                                         disabled
-                                    />
-                                </div>
-                            )}
-
-                            {profile?.role === 'parent' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                    <input
-                                        type="tel"
-                                        value={profileForm.phone}
-                                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     />
                                 </div>
                             )}

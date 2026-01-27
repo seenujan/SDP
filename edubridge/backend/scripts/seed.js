@@ -24,6 +24,7 @@ async function seedData() {
             const email = `teacher${num}@gmail.com`;
             const name = `teacher${num}`;
             const subject = subjects[i - 1];
+            const phone = `077${Math.floor(1000000 + Math.random() * 9000000)}`;
 
             try {
                 const [users] = await connection.query('SELECT id FROM users WHERE email = ?', [email]);
@@ -52,8 +53,8 @@ async function seedData() {
                     }
 
                     await connection.query(
-                        'INSERT INTO teachers (user_id, full_name, subject_id, qualification) VALUES (?, ?, ?, ?)',
-                        [userId, name, subjectId, 'B.Ed']
+                        'INSERT INTO teachers (user_id, full_name, subject_id, qualification, phone) VALUES (?, ?, ?, ?, ?)',
+                        [userId, name, subjectId, 'B.Ed', phone]
                     );
                     console.log(`Created Teacher: ${name}`);
                 } else {

@@ -49,6 +49,7 @@ import StudentMyAttendance from './pages/student/Attendance';
 import StudentMyProgress from './pages/student/Progress';
 import StudentMyEvents from './pages/student/Events';
 import StudentAnnouncements from './pages/student/Announcements';
+import StudentTimetable from './pages/student/Timetable';
 
 // Parent
 import ParentDashboard from './pages/parent/Dashboard';
@@ -59,6 +60,7 @@ import ChildPortfolio from './pages/parent/ChildPortfolio';
 import ViewProgress from './pages/parent/ViewProgress';
 import ParentAttendance from './pages/parent/Attendance';
 import ParentPTMBooking from './pages/parent/PTMBooking';
+import ParentTimetable from './pages/parent/Timetable';
 
 // Common
 import Profile from './pages/Profile';
@@ -299,6 +301,14 @@ function App() {
                         }
                     />
                     <Route
+                        path="/student/timetable"
+                        element={
+                            <ProtectedRoute requiredRole="student">
+                                <StudentTimetable />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/student/todo"
                         element={
                             <ProtectedRoute requiredRole="student">
@@ -401,6 +411,14 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="parent">
                                 <ParentDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/parent/timetable"
+                        element={
+                            <ProtectedRoute requiredRole="parent">
+                                <ParentTimetable />
                             </ProtectedRoute>
                         }
                     />

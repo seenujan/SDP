@@ -525,6 +525,7 @@ CREATE TABLE IF NOT EXISTS `school_management_system`.`teachers` (
   `user_id` INT NOT NULL,
   `full_name` VARCHAR(255) NOT NULL,
   `subject_id` INT NULL DEFAULT NULL,
+  `phone` VARCHAR(20) NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   INDEX `user_id` (`user_id` ASC) VISIBLE,
   INDEX `fk_teacher_subject` (`subject_id` ASC) VISIBLE,

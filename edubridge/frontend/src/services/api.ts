@@ -104,6 +104,14 @@ export const adminAPI = {
         api.get('/admin/reports/attendance', { params: { classId, startDate, endDate } }),
     getExamReport: (grade: string, examId?: string) =>
         api.get('/admin/reports/exams', { params: { grade, examId } }),
+    getCertificateReport: (typeId?: string, startDate?: string, endDate?: string) =>
+        api.get('/admin/reports/certificates', { params: { typeId, startDate, endDate } }),
+    getScholarshipReport: (startDate?: string, endDate?: string) =>
+        api.get('/admin/reports/scholarships', { params: { startDate, endDate } }),
+    getUserReport: (role?: string, status?: string) =>
+        api.get('/admin/reports/users', { params: { role, status } }),
+    getPTMFeedbackReport: (startDate?: string, endDate?: string) =>
+        api.get('/admin/reports/ptm-feedback', { params: { startDate, endDate } }),
     getSubjects: () => api.get('/admin/subjects'),
 };
 
@@ -194,6 +202,7 @@ export const studentAPI = {
     toggleTodoStatus: (id: number) => api.patch(`/student/todos/${id}/toggle`),
     getResults: () => api.get('/student/results'),
     getPortfolio: () => api.get('/student/portfolio'),
+    getTimetable: () => api.get('/student/timetable'),
     getEvents: () => api.get('/student/events'),
 };
 
@@ -208,6 +217,8 @@ export const parentAPI = {
         api.get(`/parent/child/${childId}/portfolio`),
     getChildResults: (childId: number) =>
         api.get(`/parent/child/${childId}/results`),
+    getChildTimetable: (childId: number) =>
+        api.get(`/parent/child/${childId}/timetable`),
     getAnnouncements: () => api.get('/parent/announcements'),
     getEvents: () => api.get('/parent/events'),
     // PTM

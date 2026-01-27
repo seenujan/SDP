@@ -75,8 +75,13 @@ router.delete('/certificates/:id', (req, res) => adminController.deleteCertifica
 router.get('/progress-card/:studentId', (req, res) => adminController.getProgressCardData(req, res));
 
 // Reports
+// Reports
 router.get('/reports/attendance', (req, res) => adminController.getAttendanceReport(req, res));
 router.get('/reports/exams', (req, res) => adminController.getExamReport(req, res));
+router.get('/reports/certificates', (req, res) => adminController.getCertificateReport(req, res));
+router.get('/reports/scholarships', (req, res) => adminController.getScholarshipReport(req, res));
+router.get('/reports/users', (req, res) => adminController.getUserReport(req, res));
+router.get('/reports/ptm-feedback', (req, res) => adminController.getPTMFeedbackReport(req, res));
 
 export default router;
 

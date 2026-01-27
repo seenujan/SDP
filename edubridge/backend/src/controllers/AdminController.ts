@@ -383,6 +383,59 @@ export class AdminController {
             res.status(500).json({ error: error.message });
         }
     }
+
+    async getCertificateReport(req: AuthRequest, res: Response) {
+        try {
+            const { typeId, startDate, endDate } = req.query;
+            const report = await reportService.getCertificateReport(
+                typeId ? parseInt(typeId as string) : undefined,
+                startDate as string,
+                endDate as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getScholarshipReport(req: AuthRequest, res: Response) {
+        try {
+            const { startDate, endDate } = req.query;
+            const report = await reportService.getScholarshipReport(
+                startDate as string,
+                endDate as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getUserReport(req: AuthRequest, res: Response) {
+        try {
+            const { role, status } = req.query;
+            const report = await reportService.getUserReport(
+                role as string,
+                status as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getPTMFeedbackReport(req: AuthRequest, res: Response) {
+        try {
+            const { startDate, endDate } = req.query;
+            const report = await reportService.getPTMFeedbackReport(
+                startDate as string,
+                endDate as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
 }
 
 export const adminController = new AdminController();

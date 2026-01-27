@@ -106,6 +106,159 @@ export class ReportService {
         const [rows]: any = await pool.query(query, params);
         return rows;
     }
+    // Get Certificate Report
+    async getCertificateReport(typeId?: number, startDate?: string, endDate?: string) {
+        console.log('[ReportService] Generating Certificate Report', { typeId, startDate, endDate });
+        let query = `
+            SELECT 
+                ci.certificate_number,
+                ct.name as certificate_type,
+                s.full_name as student_name,
+                c.grade,
+                c.section,
+                ci.issue_date,
+                u.email as issued_by
+            FROM certificate_issue ci
+            JOIN certificate_types ct ON ci.certificate_type_id = ct.id
+            JOIN students s ON ci.student_id = s.id
+            JOIN classes c ON s.class_id = c.id
+            JOIN users u ON ci.issued_by = u.id
+        `;
+
+        const params: any[] = [];
+        const conditions: string[] = [];
+
+        if (typeId) {
+            conditions.push('ci.certificate_type_id = ?');
+            params.push(typeId);
+        }
+
+        if (startDate && endDate) {
+            conditions.push('ci.issue_date BETWEEN ? AND ?');
+            params.push(startDate, endDate);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY ci.issue_date DESC';
+
+        const [rows]: any = await pool.query(query, params);
+        return rows;
+    }
+
+    // Get Scholarship Report
+    async getScholarshipReport(startDate?: string, endDate?: string) {
+        console.log('[ReportService] Generating Scholarship Report', { startDate, endDate });
+        let query = `
+            SELECT 
+                sch.title,
+                sch.amount,
+                sch.awarded_date,
+                s.full_name as student_name,
+                c.grade,
+                c.section,
+                sch.description
+            FROM scholarships sch
+            JOIN students s ON sch.student_id = s.id
+            JOIN classes c ON s.class_id = c.id
+        `;
+
+        const params: any[] = [];
+        if (startDate && endDate) {
+            query += ' WHERE sch.awarded_date BETWEEN ? AND ?';
+            params.push(startDate, endDate);
+        }
+
+        query += ' ORDER BY sch.awarded_date DESC';
+
+        const [rows]: any = await pool.query(query, params);
+        return rows;
+    }
+
+    // Get User Report
+    async getUserReport(role?: string, status?: string) {
+        console.log('[ReportService] Generating User Report', { role, status });
+        let query = `
+            SELECT 
+                u.id,
+                COALESCE(s.full_name, t.full_name, p.full_name, u.email) as name,
+                u.email,
+                u.role,
+                CASE WHEN u.active = 1 THEN 'Active' ELSE 'Inactive' END as status,
+                DATE_FORMAT(u.created_at, '%Y-%m-%d') as joined_date,
+                -- Additional details depending on role
+                CASE 
+                    WHEN u.role = 'student' THEN CONCAT(c.grade, '-', c.section)
+                    WHEN u.role = 'teacher' THEN sub.subject_name
+                    ELSE 'N/A'
+                END as 'class_or_subject'
+            FROM users u
+            LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN classes c ON s.class_id = c.id
+            LEFT JOIN teachers t ON u.id = t.user_id
+            LEFT JOIN subjects sub ON t.subject_id = sub.id
+            LEFT JOIN parents p ON u.id = p.user_id
+        `;
+
+        const params: any[] = [];
+        const conditions: string[] = [];
+
+        if (role) {
+            conditions.push('u.role = ?');
+            params.push(role);
+        }
+
+        if (status) {
+            const isActive = status === 'active' ? 1 : 0;
+            conditions.push('u.active = ?');
+            params.push(isActive);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY u.created_at DESC';
+
+        const [rows]: any = await pool.query(query, params);
+        return rows;
+    }
+
+    // Get PTM Feedback Report
+    async getPTMFeedbackReport(startDate?: string, endDate?: string) {
+        console.log('[ReportService] Generating PTM Feedback Report');
+        let query = `
+            SELECT 
+                pf.feedback_from,
+                pf.feedback,
+                DATE_FORMAT(pf.created_at, '%Y-%m-%d %H:%i') as submitted_at,
+                pm.meeting_date,
+                s.full_name as student_name,
+                c.grade,
+                c.section,
+                t.full_name as teacher_name,
+                p.full_name as parent_name
+            FROM ptm_feedback pf
+            JOIN ptm_meetings pm ON pf.ptm_meeting_id = pm.id
+            JOIN students s ON pm.student_id = s.id
+            JOIN classes c ON s.class_id = c.id
+            JOIN teachers t ON pm.teacher_id = t.user_id
+            JOIN parents p ON pm.parent_id = p.user_id
+        `;
+
+        const params: any[] = [];
+        if (startDate && endDate) {
+            query += ' WHERE pm.meeting_date BETWEEN ? AND ?';
+            params.push(startDate, endDate);
+        }
+
+        query += ' ORDER BY pf.created_at DESC';
+
+        const [rows]: any = await pool.query(query, params);
+        return rows;
+    }
 }
 
 export const reportService = new ReportService();

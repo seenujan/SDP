@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { adminAPI } from '../../services/api'; // Expecting new API methods here
-// import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, Filter, FileText } from 'lucide-react';
+import { adminAPI } from '../../services/api';
+import { Download, Filter, FileText, Calendar, Users, Award, MessageSquare } from 'lucide-react';
 
 const Reports = () => {
-    const [activeTab, setActiveTab] = useState<'attendance' | 'exam'>('attendance');
+    const [activeTab, setActiveTab] = useState<'attendance' | 'exam' | 'certificate' | 'scholarship' | 'user' | 'ptm'>('attendance');
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState<any[]>([]);
 
     // Filters
     const [grades, setGrades] = useState<any[]>([]);
     const [classes, setClasses] = useState<any[]>([]);
+    const [certificateTypes, setCertificateTypes] = useState<any[]>([]);
 
     // Selected Filters
     const [selectedGrade, setSelectedGrade] = useState('');
@@ -19,26 +19,31 @@ const Reports = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedExamId, setSelectedExamId] = useState('');
+    const [selectedCertTypeId, setSelectedCertTypeId] = useState('');
+    const [selectedRole, setSelectedRole] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState('');
 
     useEffect(() => {
         fetchMetadata();
     }, []);
 
     useEffect(() => {
-        // Reset data when tab changes
         setReportData([]);
-        if (activeTab === 'exam' && selectedGrade) {
-            // fetchExamsForGrade(selectedGrade); // Assuming we can fetch this
-        }
+        // Reset specific filters if needed when tab changes
     }, [activeTab]);
 
     const fetchMetadata = async () => {
         try {
-            const gradesRes = await adminAPI.getGrades(); // Reusing existing
+            const gradesRes = await adminAPI.getGrades();
             setGrades(gradesRes.data);
 
-            const classesRes = await adminAPI.getClasses(); // Need to check if this exists or similar
+            const classesRes = await adminAPI.getClasses();
             setClasses(classesRes.data);
+
+            try {
+                const certTypesRes = await adminAPI.getCertificateTypes();
+                setCertificateTypes(certTypesRes.data);
+            } catch (e) { console.error('Cert types fetch failed', e); }
         } catch (error) {
             console.error('Failed to fetch metadata:', error);
         }
@@ -48,12 +53,27 @@ const Reports = () => {
         setLoading(true);
         try {
             let response;
-            if (activeTab === 'attendance') {
-                response = await adminAPI.getAttendanceReport(selectedClassId, startDate, endDate);
-            } else {
-                response = await adminAPI.getExamReport(selectedGrade, selectedExamId);
+            switch (activeTab) {
+                case 'attendance':
+                    response = await adminAPI.getAttendanceReport(selectedClassId, startDate, endDate);
+                    break;
+                case 'exam':
+                    response = await adminAPI.getExamReport(selectedGrade, selectedExamId);
+                    break;
+                case 'certificate':
+                    response = await adminAPI.getCertificateReport(selectedCertTypeId, startDate, endDate);
+                    break;
+                case 'scholarship':
+                    response = await adminAPI.getScholarshipReport(startDate, endDate);
+                    break;
+                case 'user':
+                    response = await adminAPI.getUserReport(selectedRole, selectedStatus);
+                    break;
+                case 'ptm':
+                    response = await adminAPI.getPTMFeedbackReport(startDate, endDate);
+                    break;
             }
-            setReportData(response.data);
+            setReportData(response?.data || []);
         } catch (error) {
             console.error('Failed to generate report:', error);
         } finally {
@@ -64,9 +84,8 @@ const Reports = () => {
     const handleExport = () => {
         if (reportData.length === 0) return;
 
-        // Simple CSV Export
         const headers = Object.keys(reportData[0]).join(',');
-        const rows = reportData.map(row => Object.values(row).join(',')).join('\n');
+        const rows = reportData.map(row => Object.values(row).map(val => `"${val}"`).join(',')).join('\n'); // Add quotes to handle commas in content
         const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows}`;
 
         const encodedUri = encodeURI(csvContent);
@@ -78,60 +97,55 @@ const Reports = () => {
         document.body.removeChild(link);
     };
 
+    const tabs = [
+        { id: 'attendance', label: 'Attendance', icon: <Calendar className="w-4 h-4" /> },
+        { id: 'exam', label: 'Exams', icon: <FileText className="w-4 h-4" /> },
+        { id: 'certificate', label: 'Certificates', icon: <Award className="w-4 h-4" /> },
+        { id: 'scholarship', label: 'Scholarships', icon: <Award className="w-4 h-4" /> },
+        { id: 'user', label: 'Users', icon: <Users className="w-4 h-4" /> },
+        { id: 'ptm', label: 'PTM Feedback', icon: <MessageSquare className="w-4 h-4" /> },
+    ];
+
     return (
         <DashboardLayout>
             <div className="animate-fade-in space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Reports</h1>
-                        <p className="text-gray-600 mt-1">Generate and analyze academic performace and attendance reports</p>
-                    </div>
-                    <div className="flex gap-2">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Reports Center</h1>
+                    <p className="text-gray-600 mt-1">Generate and analyze system-wide reports</p>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex overflow-x-auto gap-2 pb-2">
+                    {tabs.map(tab => (
                         <button
-                            onClick={() => setActiveTab('attendance')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'attendance' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id
+                                    ? 'bg-primary-600 text-white shadow-md'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                                }`}
                         >
-                            Attendance Report
+                            {tab.icon} {tab.label}
                         </button>
-                        <button
-                            onClick={() => setActiveTab('exam')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'exam' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Exam Report
-                        </button>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Filters Section */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                    <div className="flex items-center gap-2 mb-4 text-gray-700 font-semibold">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 mb-4 text-gray-700 font-semibold border-b pb-2">
                         <Filter className="w-5 h-5" />
                         <h2>Report Filters</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {activeTab === 'attendance' ? (
+                        {/* Common Date Filters for most tabs */}
+                        {['attendance', 'certificate', 'scholarship', 'ptm'].includes(activeTab) && (
                             <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                                    <select
-                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
-                                        value={selectedClassId}
-                                        onChange={(e) => setSelectedClassId(e.target.value)}
-                                    >
-                                        <option value="">Select Class</option>
-                                        {classes.map((cls: any) => (
-                                            <option key={cls.id} value={cls.id}>
-                                                {cls.grade} - {cls.section}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                                     <input
                                         type="date"
-                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
                                     />
@@ -140,18 +154,38 @@ const Reports = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                                     <input
                                         type="date"
-                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
                                     />
                                 </div>
                             </>
-                        ) : (
+                        )}
+
+                        {activeTab === 'attendance' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                                <select
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                    value={selectedClassId}
+                                    onChange={(e) => setSelectedClassId(e.target.value)}
+                                >
+                                    <option value="">Select Class</option>
+                                    {classes.map((cls: any) => (
+                                        <option key={cls.id} value={cls.id}>
+                                            {cls.grade} - {cls.section}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {activeTab === 'exam' && (
                             <>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
                                     <select
-                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
                                         value={selectedGrade}
                                         onChange={(e) => setSelectedGrade(e.target.value)}
                                     >
@@ -165,7 +199,7 @@ const Reports = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Exam ID (Optional)</label>
                                     <input
                                         type="number"
-                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
                                         placeholder="Ex: 10"
                                         value={selectedExamId}
                                         onChange={(e) => setSelectedExamId(e.target.value)}
@@ -174,61 +208,82 @@ const Reports = () => {
                             </>
                         )}
 
-                        <div className="flex items-end">
+                        {activeTab === 'certificate' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Certificate Type</label>
+                                <select
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                    value={selectedCertTypeId}
+                                    onChange={(e) => setSelectedCertTypeId(e.target.value)}
+                                >
+                                    <option value="">All Types</option>
+                                    {certificateTypes.map((t: any) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {activeTab === 'user' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                    <select
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        value={selectedRole}
+                                        onChange={(e) => setSelectedRole(e.target.value)}
+                                    >
+                                        <option value="">All Roles</option>
+                                        <option value="student">Student</option>
+                                        <option value="teacher">Teacher</option>
+                                        <option value="parent">Parent</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 px-4 py-2 border"
+                                        value={selectedStatus}
+                                        onChange={(e) => setSelectedStatus(e.target.value)}
+                                    >
+                                        <option value="">All Status</option>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="col-span-1 md:col-span-4 flex justify-end mt-2">
                             <button
                                 onClick={handleGenerateReport}
                                 disabled={loading}
-                                className="w-full bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2 font-medium shadow-sm"
                             >
-                                {loading ? 'Generating...' : <><FileText className="w-4 h-4" /> Generate Report</>}
+                                {loading ? 'Generating...' : <><FileText className="w-5 h-5" /> Generate Report</>}
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* Results Section */}
-                {reportData.length > 0 && (
-                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                {reportData.length > 0 ? (
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-slide-up">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-gray-800">
-                                {activeTab === 'attendance' ? 'Attendance Analysis' : 'Exam Performance Analysis'}
+                                Report Results <span className="text-gray-400 text-sm font-normal">({reportData.length} records)</span>
                             </h2>
                             <button
                                 onClick={handleExport}
-                                className="text-primary-600 hover:text-primary-700 flex items-center gap-2 font-medium"
+                                className="text-primary-600 hover:text-primary-700 flex items-center gap-2 font-medium bg-primary-50 px-4 py-2 rounded-lg hover:bg-primary-100 transition-colors"
                             >
                                 <Download className="w-4 h-4" /> Export CSV
                             </button>
                         </div>
 
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            {/* Add dynamic summary cards based on data */}
-                            {activeTab === 'attendance' ? (
-                                <>
-                                    <div className="bg-blue-50 p-4 rounded-lg">
-                                        <p className="text-sm text-blue-600 font-medium">Average Attendance</p>
-                                        <p className="text-2xl font-bold text-blue-800">
-                                            {(reportData.reduce((acc, curr) => acc + parseFloat(curr.attendance_percentage), 0) / reportData.length).toFixed(1)}%
-                                        </p>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="bg-green-50 p-4 rounded-lg">
-                                        <p className="text-sm text-green-600 font-medium">Class Average</p>
-                                        <p className="text-2xl font-bold text-green-800">
-                                            {reportData.length > 0
-                                                ? (reportData.reduce((acc, curr) => acc + parseFloat(curr.average_score || 0), 0) / reportData.length).toFixed(1)
-                                                : '0'}
-                                        </p>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
                         {/* Table */}
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto rounded-lg border border-gray-200">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
@@ -241,7 +296,7 @@ const Reports = () => {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {reportData.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
+                                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                             {Object.values(row).map((val: any, i) => (
                                                 <td key={i} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                                     {val}
@@ -252,6 +307,11 @@ const Reports = () => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                ) : (
+                    <div className="bg-white p-12 rounded-xl shadow-sm border border-gray-100 text-center text-gray-400">
+                        <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No report data generated yet. Adjust filters and click "Generate Report".</p>
                     </div>
                 )}
             </div>

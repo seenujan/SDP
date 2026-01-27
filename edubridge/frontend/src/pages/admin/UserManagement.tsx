@@ -143,7 +143,8 @@ const UserManagement = () => {
                 await adminAPI.createTeacher({
                     email: formData.email,
                     fullName: formData.fullName,
-                    subjectId: formData.additionalData.subjectId
+                    subjectId: formData.additionalData.subjectId,
+                    phone: formData.additionalData.phone
                 });
             } else {
                 // Admin or fallback
@@ -327,6 +328,7 @@ const UserManagement = () => {
         { key: 'user_id', header: 'ID' },
         { key: 'full_name', header: 'Name' },
         { key: 'email', header: 'Email' },
+        { key: 'phone', header: 'Phone', render: (val: string) => val || 'N/A' },
         { key: 'subject', header: 'Subject', render: (val: string) => val || 'Not Assigned' },
         {
             key: 'active',
@@ -517,21 +519,35 @@ const UserManagement = () => {
 
             {/* Teacher Fields */}
             {(formData.role === 'teacher' || (isEdit && selectedUser?.role === 'teacher')) && (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-                    <select
-                        value={formData.additionalData.subjectId}
-                        onChange={(e) => setFormData({
-                            ...formData, additionalData: { ...formData.additionalData, subjectId: e.target.value }
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                        <option value="">Select Subject</option>
-                        {subjects.map((s) => (
-                            <option key={s.id} value={s.id}>{s.subject_name}</option>
-                        ))}
-                    </select>
-                </div>
+                <>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
+                        <select
+                            value={formData.additionalData.subjectId}
+                            onChange={(e) => setFormData({
+                                ...formData, additionalData: { ...formData.additionalData, subjectId: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        >
+                            <option value="">Select Subject</option>
+                            {subjects.map((s) => (
+                                <option key={s.id} value={s.id}>{s.subject_name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                        <input
+                            type="tel"
+                            value={formData.additionalData.phone}
+                            onChange={(e) => setFormData({
+                                ...formData, additionalData: { ...formData.additionalData, phone: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            placeholder="e.g., +94 77 123 4567"
+                        />
+                    </div>
+                </>
             )}
 
             {/* Parent Fields */}

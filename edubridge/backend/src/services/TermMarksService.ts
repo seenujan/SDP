@@ -1,5 +1,6 @@
 import { pool } from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { notificationService } from './NotificationService';
 
 interface TermMarkEntry {
     student_id: number;
@@ -37,6 +38,14 @@ export class TermMarksService {
                         [mark.student_id, mark.subject_id, mark.term, mark.marks, mark.feedback || null]
                     );
                 }
+
+                // Notify parent
+                notificationService.notifyStudentParents(
+                    mark.student_id,
+                    'New Exam Results Available',
+                    `Results for ${mark.term} have been published.`,
+                    'result'
+                ).catch(err => console.error('Notification failed', err));
             }
 
             await connection.commit();

@@ -46,6 +46,9 @@ router.get('/results', (req, res) => resultsController.getMyResults(req, res));
 // Portfolio
 router.get('/portfolio', (req, res) => studentController.getPortfolio(req, res));
 
+// Timetable
+router.get('/timetable', (req, res) => studentController.getTimetable(req, res));
+
 // Announcements & Events
 router.get('/announcements', (req, res) => studentController.getAnnouncements(req, res));
 router.get('/events', (req, res) => studentController.getEvents(req, res));

@@ -414,6 +414,30 @@ export class StudentController {
         }
     }
 
+    // GET /api/student/timetable
+    async getTimetable(req: AuthRequest, res: Response) {
+        try {
+            const [student]: any = await pool.query(
+                `SELECT s.id, s.class_id 
+                 FROM students s 
+                 WHERE s.user_id = ?`,
+                [req.user!.id]
+            );
+
+            if (!student || student.length === 0) {
+                return res.status(404).json({ error: 'Student profile not found' });
+            }
+
+            // Import dynamically to avoid circular dependency if any, or just use imported service
+            // ensuring TimetableService is exported
+            const { timetableService } = require('../services/TimetableService');
+            const timetable = await timetableService.getTimetableByClass(student[0].class_id);
+            res.json(timetable);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // GET /api/student/events
     async getEvents(req: AuthRequest, res: Response) {
         try {

@@ -90,6 +90,29 @@ export class ParentController {
 
     }
 
+    // GET /api/parent/child/:childId/timetable
+    async getChildTimetable(req: AuthRequest, res: Response) {
+        try {
+            const childId = parseInt(req.params.childId);
+
+            // Verify this child belongs to this parent
+            const [child]: any = await pool.query(
+                'SELECT * FROM students WHERE id = ? AND parent_id = ?',
+                [childId, req.user!.id]
+            );
+
+            if (!child[0]) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            const { timetableService } = require('../services/TimetableService');
+            const timetable = await timetableService.getTimetableByClass(child[0].class_id);
+            res.json(timetable);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // GET /api/parent/child/:childId/results
     async getChildResults(req: AuthRequest, res: Response) {
         try {

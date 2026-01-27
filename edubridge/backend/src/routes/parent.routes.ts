@@ -25,6 +25,9 @@ router.get('/child/:childId/portfolio', (req, res) =>
 router.get('/child/:childId/results', (req, res) =>
     parentController.getChildResults(req, res)
 );
+router.get('/child/:childId/timetable', (req, res) =>
+    parentController.getChildTimetable(req, res)
+);
 
 // Announcements
 router.get('/announcements', async (req, res) => {

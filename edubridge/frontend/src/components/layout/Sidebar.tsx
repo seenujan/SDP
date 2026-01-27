@@ -57,6 +57,7 @@ const Sidebar = () => {
             case 'student':
                 return [
                     { icon: LayoutDashboard, label: 'Dashboard', path: '/student/dashboard' },
+                    { icon: Calendar, label: 'Timetable', path: '/student/timetable' },
                     { icon: CheckSquare, label: 'To-Do List', path: '/student/todo' },
                     { icon: FileText, label: 'Assignments', path: '/student/assignments' },
                     { icon: BookOpen, label: 'Exams', path: '/student/exams' },
@@ -70,6 +71,7 @@ const Sidebar = () => {
             case 'parent':
                 return [
                     { icon: LayoutDashboard, label: 'Dashboard', path: '/parent/dashboard' },
+                    { icon: Calendar, label: 'Timetable', path: '/parent/timetable' },
                     { icon: UserCircle, label: 'Child Results', path: '/parent/child-results' },
                     { icon: Briefcase, label: 'Child Portfolio', path: '/parent/child-portfolio' },
                     { icon: ClipboardList, label: 'Attendance', path: '/parent/attendance' },
