@@ -601,67 +601,6 @@ class ExamService {
             answers: detailedAnswers
         };
     }
-
-    // Manual Marks Upload
-    async uploadManualMarks(examId: number, marksData: { studentId: number; marks: number }[], teacherId: number) {
-        // Verify ownership
-        await this.verifyExamOwnership(examId, teacherId);
-
-        const connection = await pool.getConnection();
-
-        try {
-            await connection.beginTransaction();
-
-            for (const item of marksData) {
-                // Check if attempt exists
-                const [attempts] = await connection.execute<RowDataPacket[]>(
-                    'SELECT id FROM student_exam_attempts WHERE student_id = ? AND exam_id = ?',
-                    [item.studentId, examId]
-                );
-
-                if (attempts.length > 0) {
-                    // Update existing
-                    await connection.execute(
-                        'UPDATE student_exam_attempts SET score = ?, status = ?, end_time = NOW() WHERE id = ?',
-                        [item.marks, 'evaluated', attempts[0].id]
-                    );
-                } else {
-                    // Create new attempt
-                    await connection.execute(
-                        'INSERT INTO student_exam_attempts (student_id, exam_id, start_time, end_time, status, score) VALUES (?, ?, NOW(), NOW(), ?, ?)',
-                        [item.studentId, examId, 'evaluated', item.marks]
-                    );
-                }
-            }
-
-            await connection.commit();
-            return { success: true, message: 'Marks uploaded successfully' };
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
-        }
-    }
-
-    // Get marks for an exam (Simple list for manual entry)
-    async getExamMarks(examId: number) {
-        const [rows] = await pool.execute<RowDataPacket[]>(
-            `SELECT 
-                s.id as student_id,
-                s.full_name as student_name,
-                s.roll_number,
-                sea.score as marks,
-                sea.status
-             FROM students s
-             JOIN exams e ON e.class_id = s.class_id
-             LEFT JOIN student_exam_attempts sea ON s.id = sea.student_id AND sea.exam_id = e.id
-             WHERE e.id = ?
-             ORDER BY s.roll_number`,
-            [examId]
-        );
-        return rows;
-    }
 }
 
 export default new ExamService();

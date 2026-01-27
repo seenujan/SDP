@@ -13,7 +13,7 @@ class ResultsService {
                 sub.subject_name as subject,
                 e.exam_date,
                 e.total_marks,
-                COALESCE(sea.score, (
+                (
                     SELECT COALESCE(SUM(
                         CASE 
                             WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
@@ -27,9 +27,9 @@ class ResultsService {
                     WHERE sea_inner.student_id = ? AND sea_inner.exam_id = e.id
                     AND sea_inner.status IN ('submitted', 'evaluated')
                     ORDER BY sea_inner.id DESC LIMIT 1
-                )) as obtained_marks,
+                ) as obtained_marks,
                 ROUND(
-                    COALESCE(sea.score, (
+                    (
                         SELECT COALESCE(SUM(
                             CASE 
                                 WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
@@ -43,13 +43,13 @@ class ResultsService {
                         WHERE sea_inner.student_id = ? AND sea_inner.exam_id = e.id
                         AND sea_inner.status IN ('submitted', 'evaluated')
                         ORDER BY sea_inner.id DESC LIMIT 1
-                    )) / e.total_marks * 100, 2
+                    ) / e.total_marks * 100, 2
                 ) as percentage
             FROM exams e
             JOIN subjects sub ON e.subject_id = sub.id
             JOIN student_exam_attempts sea ON e.id = sea.exam_id
             WHERE sea.student_id = ? AND sea.status IN ('submitted', 'evaluated')
-            GROUP BY e.id, e.title, sub.subject_name, e.exam_date, e.total_marks, sea.score
+            GROUP BY e.id, e.title, sub.subject_name, e.exam_date, e.total_marks
             ORDER BY e.exam_date DESC`,
             [studentId, studentId, studentId]
         );

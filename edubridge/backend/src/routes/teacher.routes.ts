@@ -53,10 +53,6 @@ router.put('/exams/:id/publish', (req, res) => teacherController.publishExam(req
 router.get('/exams/:id/submissions', (req, res) => teacherController.getExamSubmissions(req, res));
 router.get('/exams/attempt/:attemptId', (req, res) => teacherController.getStudentAttemptDetails(req, res));
 
-// Marks
-router.post('/marks/upload', (req, res) => teacherController.uploadMarks(req, res));
-router.get('/marks/:examId', (req, res) => teacherController.getMarksByExam(req, res));
-
 // Term Marks
 router.post('/term-marks/upload', (req, res) => teacherController.uploadTermMarks(req, res));
 router.get('/term-marks/:classId/:term/:subjectId', (req, res) => teacherController.getTermMarks(req, res));

@@ -336,30 +336,6 @@ export class TeacherController {
         }
     }
 
-    // Manual Exam Marks
-    async uploadMarks(req: AuthRequest, res: Response) {
-        try {
-            const { examId, marks } = req.body;
-            const result = await examService.uploadManualMarks(
-                parseInt(examId),
-                marks,
-                req.user!.id
-            );
-            res.json(result);
-        } catch (error: any) {
-            res.status(400).json({ error: error.message });
-        }
-    }
-
-    async getMarksByExam(req: AuthRequest, res: Response) {
-        try {
-            const marks = await examService.getExamMarks(parseInt(req.params.examId));
-            res.json(marks);
-        } catch (error: any) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-
     // Term Marks
     async uploadTermMarks(req: AuthRequest, res: Response) {
         try {
