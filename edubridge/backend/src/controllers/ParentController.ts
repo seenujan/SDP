@@ -126,13 +126,29 @@ export class ParentController {
                 ORDER BY am.reviewed_at DESC
             `, [childId]);
 
-            // Fetch Online Exam Marks
+            // Fetch Online Exam Marks (Dynamic)
             const [examMarks]: any = await pool.query(`
-                SELECT oem.score, oem.entered_at, e.title, s.subject_name as subject, e.exam_date
-                FROM online_exam_marks oem
-                JOIN exams e ON oem.exam_id = e.id
+                SELECT 
+                    (
+                        SELECT COALESCE(SUM(
+                            CASE 
+                                WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
+                                WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', LOWER(qb.correct_answer) COLLATE utf8mb4_unicode_ci, '%') THEN qb.marks
+                                ELSE 0 
+                            END
+                        ), 0)
+                        FROM student_exam_answers ans
+                        JOIN question_bank qb ON ans.question_id = qb.id
+                        WHERE ans.attempt_id = sea.id
+                    ) as score,
+                    sea.end_time as entered_at,
+                    e.title,
+                    s.subject_name as subject,
+                    e.exam_date
+                FROM student_exam_attempts sea
+                JOIN exams e ON sea.exam_id = e.id
                 JOIN subjects s ON e.subject_id = s.id
-                WHERE oem.student_id = ?
+                WHERE sea.student_id = ? AND sea.status IN ('submitted', 'evaluated')
                 ORDER BY e.exam_date DESC
             `, [childId]);
 

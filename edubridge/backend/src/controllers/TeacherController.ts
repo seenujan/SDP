@@ -5,7 +5,6 @@ import { assignmentService } from '../services/AssignmentService';
 import { dashboardService } from '../services/DashboardService';
 import { timetableService } from '../services/TimetableService';
 import examService from '../services/ExamService';
-import { marksService } from '../services/MarksService';
 import { termMarksService } from '../services/TermMarksService';
 import { questionBankService } from '../services/QuestionBankService';
 import { studentPortfolioService } from '../services/StudentPortfolioService';
@@ -336,10 +335,15 @@ export class TeacherController {
         }
     }
 
-    // Marks
+    // Manual Exam Marks
     async uploadMarks(req: AuthRequest, res: Response) {
         try {
-            const result = await marksService.uploadMarks(req.body.marks);
+            const { examId, marks } = req.body;
+            const result = await examService.uploadManualMarks(
+                parseInt(examId),
+                marks,
+                req.user!.id
+            );
             res.json(result);
         } catch (error: any) {
             res.status(400).json({ error: error.message });
@@ -348,7 +352,7 @@ export class TeacherController {
 
     async getMarksByExam(req: AuthRequest, res: Response) {
         try {
-            const marks = await marksService.getMarksByExam(parseInt(req.params.examId));
+            const marks = await examService.getExamMarks(parseInt(req.params.examId));
             res.json(marks);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

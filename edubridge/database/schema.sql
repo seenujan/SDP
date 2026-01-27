@@ -311,7 +311,6 @@ CREATE TABLE student_exam_attempts (
   start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   end_time DATETIME,
   status ENUM('in_progress','submitted','evaluated') DEFAULT 'in_progress',
-  total_score DECIMAL(10,2) DEFAULT 0.00,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
   FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
 );

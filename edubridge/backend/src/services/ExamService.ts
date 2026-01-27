@@ -61,7 +61,18 @@ class ExamService {
                 COUNT(DISTINCT eq.question_id) as question_count,
                 sea.status as attempt_status,
                 sea.id as attempt_id,
-                sea.total_score
+                (
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
+                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', LOWER(qb.correct_answer) COLLATE utf8mb4_unicode_ci, '%') THEN qb.marks
+                            ELSE 0 
+                        END
+                    ), 0)
+                    FROM student_exam_answers ans
+                    JOIN question_bank qb ON ans.question_id = qb.id
+                    WHERE ans.attempt_id = sea.id
+                ) as total_score
             FROM exams e
             JOIN teachers t ON e.teacher_id = t.user_id
             JOIN subjects s ON e.subject_id = s.id
@@ -69,7 +80,7 @@ class ExamService {
             LEFT JOIN student_exam_attempts sea ON e.id = sea.exam_id AND sea.student_id = ?
             WHERE e.class_id = ? 
             AND e.status = 'published'
-            GROUP BY e.id, t.full_name, s.subject_name, sea.status, sea.id, sea.total_score`;
+            GROUP BY e.id, t.full_name, s.subject_name, sea.status, sea.id`;
             params.unshift(studentId); // Add studentId at the start
         }
 
@@ -467,24 +478,11 @@ class ExamService {
 
         // Update attempt
         await pool.execute(
-            'UPDATE student_exam_attempts SET status = ?, end_time = NOW(), total_score = ? WHERE id = ?',
-            ['submitted', totalScore, attemptId]
+            'UPDATE student_exam_attempts SET status = ?, end_time = NOW() WHERE id = ?',
+            ['submitted', attemptId]
         );
 
-        // Sync with legacy marks table
-        const [marksEntry] = await pool.execute<RowDataPacket[]>(
-            'SELECT id FROM online_exam_marks WHERE student_id = ? AND exam_id = ?',
-            [attempt.student_id, attempt.exam_id]
-        );
-
-        if (marksEntry.length > 0) {
-            await pool.execute('UPDATE online_exam_marks SET score = ? WHERE id = ?', [totalScore, marksEntry[0].id]);
-        } else {
-            await pool.execute(
-                'INSERT INTO online_exam_marks (student_id, exam_id, score, entered_at) VALUES (?, ?, ?, NOW())',
-                [attempt.student_id, attempt.exam_id, totalScore]
-            );
-        }
+        // online_exam_marks and total_score updates REMOVED for Strict 3NF
 
         return { success: true, score: totalScore };
     }
@@ -497,11 +495,22 @@ class ExamService {
                 sea.status,
                 sea.start_time,
                 sea.end_time,
-                sea.total_score,
                 s.full_name as student_name,
                 s.roll_number,
                 c.grade,
-                c.section
+                c.section,
+                (
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
+                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', LOWER(qb.correct_answer) COLLATE utf8mb4_unicode_ci, '%') THEN qb.marks
+                            ELSE 0 
+                        END
+                    ), 0)
+                    FROM student_exam_answers ans
+                    JOIN question_bank qb ON ans.question_id = qb.id
+                    WHERE ans.attempt_id = sea.id
+                ) as total_score
             FROM student_exam_attempts sea
             JOIN students s ON sea.student_id = s.id
             JOIN classes c ON s.class_id = c.id
@@ -559,11 +568,77 @@ class ExamService {
             };
         });
 
+        const totalScore = detailedAnswers.reduce((sum: number, ans: any) => sum + ans.marks_awarded, 0);
+
         return {
-            attempt,
+            attempt: {
+                ...attempt,
+                total_score: totalScore
+            },
             student,
             answers: detailedAnswers
         };
+    }
+
+    // Manual Marks Upload
+    async uploadManualMarks(examId: number, marksData: { studentId: number; marks: number }[], teacherId: number) {
+        // Verify ownership
+        await this.verifyExamOwnership(examId, teacherId);
+
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            for (const item of marksData) {
+                // Check if attempt exists
+                const [attempts] = await connection.execute<RowDataPacket[]>(
+                    'SELECT id FROM student_exam_attempts WHERE student_id = ? AND exam_id = ?',
+                    [item.studentId, examId]
+                );
+
+                if (attempts.length > 0) {
+                    // Update existing
+                    await connection.execute(
+                        'UPDATE student_exam_attempts SET score = ?, status = ?, end_time = NOW() WHERE id = ?',
+                        [item.marks, 'evaluated', attempts[0].id]
+                    );
+                } else {
+                    // Create new attempt
+                    await connection.execute(
+                        'INSERT INTO student_exam_attempts (student_id, exam_id, start_time, end_time, status, score) VALUES (?, ?, NOW(), NOW(), ?, ?)',
+                        [item.studentId, examId, 'evaluated', item.marks]
+                    );
+                }
+            }
+
+            await connection.commit();
+            return { success: true, message: 'Marks uploaded successfully' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    // Get marks for an exam (Simple list for manual entry)
+    async getExamMarks(examId: number) {
+        const [rows] = await pool.execute<RowDataPacket[]>(
+            `SELECT 
+                s.id as student_id,
+                s.full_name as student_name,
+                s.roll_number,
+                sea.score as marks,
+                sea.status
+             FROM students s
+             JOIN exams e ON e.class_id = s.class_id
+             LEFT JOIN student_exam_attempts sea ON s.id = sea.student_id AND sea.exam_id = e.id
+             WHERE e.id = ?
+             ORDER BY s.roll_number`,
+            [examId]
+        );
+        return rows;
     }
 }
 

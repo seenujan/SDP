@@ -243,11 +243,10 @@ export class DashboardService {
           SELECT e.*, sub.subject_name as subject
           FROM exams e
           JOIN subjects sub ON e.subject_id = sub.id
-          JOIN classes c ON e.class_id = c.id
-          WHERE c.grade = ? AND e.exam_date >= CURDATE()
+          WHERE e.class_id = ? AND e.status = 'published' AND e.exam_date >= CURDATE()
           ORDER BY e.exam_date ASC
           LIMIT 3
-        `, [grade]);
+        `, [classId]);
     // Note: Exams linked to class_id usually? 
     // Schema Step 1082: exams has class_id.
     // Previous code used grade.
