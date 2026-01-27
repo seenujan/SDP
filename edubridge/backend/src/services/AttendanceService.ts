@@ -6,27 +6,26 @@ export class AttendanceService {
         studentId: number;
         status: 'present' | 'absent' | 'late';
         date: string;
-        classId: number;
-        subjectId: number;
+        timetableId: number;
     }) {
         // Check if attendance record already exists
         const [existing]: any = await pool.query(
-            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id = ?',
-            [data.studentId, data.date, data.subjectId]
+            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND timetable_id = ?',
+            [data.studentId, data.date, data.timetableId]
         );
 
         if (existing && existing.length > 0) {
             // Update existing record
             const [result] = await pool.query(
-                'UPDATE attendance SET status = ?, class_id = ? WHERE id = ?',
-                [data.status, data.classId, existing[0].id]
+                'UPDATE attendance SET status = ? WHERE id = ?',
+                [data.status, existing[0].id]
             );
             return result;
         } else {
             // Insert new record
             const [result] = await pool.query(
-                'INSERT INTO attendance (student_id, status, date, class_id, subject_id) VALUES (?, ?, ?, ?, ?)',
-                [data.studentId, data.status, data.date, data.classId, data.subjectId]
+                'INSERT INTO attendance (student_id, status, date, timetable_id) VALUES (?, ?, ?, ?)',
+                [data.studentId, data.status, data.date, data.timetableId]
             );
             return result;
         }
@@ -37,31 +36,30 @@ export class AttendanceService {
         studentId: number;
         status: 'present' | 'absent' | 'late';
         date: string;
-        classId: number;
-        subjectId: number;
+        timetableId: number;
     }>) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
             for (const data of attendanceData) {
-                // Check if attendance record already exists for this student, date, and subject
+                // Check if attendance record already exists for this student, date, and timetable slot
                 const [existing]: any = await connection.query(
-                    'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id = ?',
-                    [data.studentId, data.date, data.subjectId]
+                    'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND timetable_id = ?',
+                    [data.studentId, data.date, data.timetableId]
                 );
 
                 if (existing && existing.length > 0) {
                     // Update existing record
                     await connection.query(
-                        'UPDATE attendance SET status = ?, class_id = ? WHERE id = ?',
-                        [data.status, data.classId, existing[0].id]
+                        'UPDATE attendance SET status = ? WHERE id = ?',
+                        [data.status, existing[0].id]
                     );
                 } else {
                     // Insert new record
                     await connection.query(
-                        'INSERT INTO attendance (student_id, status, date, class_id, subject_id) VALUES (?, ?, ?, ?, ?)',
-                        [data.studentId, data.status, data.date, data.classId, data.subjectId]
+                        'INSERT INTO attendance (student_id, status, date, timetable_id) VALUES (?, ?, ?, ?)',
+                        [data.studentId, data.status, data.date, data.timetableId]
                     );
                 }
             }
@@ -102,7 +100,8 @@ export class AttendanceService {
         sub.subject_name as subject
       FROM attendance a
       JOIN students s ON a.student_id = s.id
-      JOIN subjects sub ON a.subject_id = sub.id
+      JOIN timetable t ON a.timetable_id = t.id
+      JOIN subjects sub ON t.subject_id = sub.id
       WHERE s.grade = ? AND a.date = ?
       ORDER BY s.roll_number, s.full_name`,
             [grade, date]

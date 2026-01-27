@@ -17,7 +17,7 @@ interface PortfolioEntry {
     performance_summary: string;
     activities_achievements: string;
     areas_improvement: string;
-    teacher_remarks: string;
+    discipline_remarks: string;
     created_at: string;
     teacher_name: string;
 }
@@ -109,7 +109,7 @@ const StudentPortfolio = () => {
             performance_summary: entry.performance_summary,
             activities_achievements: entry.activities_achievements,
             areas_improvement: entry.areas_improvement,
-            teacher_remarks: entry.teacher_remarks,
+            discipline_remarks: entry.discipline_remarks,
         });
     };
 
@@ -124,7 +124,7 @@ const StudentPortfolio = () => {
                 performanceSummary: editFormData.performance_summary,
                 activitiesAchievements: editFormData.activities_achievements,
                 areasImprovement: editFormData.areas_improvement,
-                teacherRemarks: editFormData.teacher_remarks,
+                disciplineRemarks: editFormData.discipline_remarks,
             });
 
             alert('Portfolio entry updated successfully!');
@@ -342,11 +342,11 @@ const StudentPortfolio = () => {
 
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Teacher Remarks
+                                                    Discipline Remarks
                                                 </label>
                                                 <textarea
-                                                    value={editFormData.teacher_remarks || ''}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, teacher_remarks: e.target.value })}
+                                                    value={editFormData.discipline_remarks || ''}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, discipline_remarks: e.target.value })}
                                                     rows={3}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                                 />
@@ -393,10 +393,10 @@ const StudentPortfolio = () => {
                                                 </div>
                                             )}
 
-                                            {entry.teacher_remarks && (
+                                            {entry.discipline_remarks && (
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-700">Teacher Remarks:</p>
-                                                    <p className="text-sm text-gray-600">{entry.teacher_remarks}</p>
+                                                    <p className="text-sm font-medium text-gray-700">Discipline Remarks:</p>
+                                                    <p className="text-sm text-gray-600">{entry.discipline_remarks}</p>
                                                 </div>
                                             )}
                                         </>

@@ -11,7 +11,7 @@ export class StudentPortfolioService {
                 s.full_name as student_name,
                 s.roll_number
             FROM portfolios p
-            JOIN teachers t ON p.teacher_id = t.user_id
+            JOIN teachers t ON p.teacher_id = t.id
             JOIN students s ON p.student_id = s.id
             WHERE p.student_id = ?
             ORDER BY p.created_at DESC`,
@@ -62,11 +62,11 @@ export class StudentPortfolioService {
         performanceSummary: string;
         activitiesAchievements: string;
         areasImprovement: string;
-        teacherRemarks: string;
+        disciplineRemarks: string;
     }): Promise<any> {
         const [result] = await pool.query(
             `INSERT INTO portfolios 
-            (student_id, teacher_id, performance_summary, activities_achievements, areas_improvement, teacher_remarks)
+            (student_id, teacher_id, performance_summary, activities_achievements, areas_improvement, discipline_remarks)
             VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 data.studentId,
@@ -74,7 +74,7 @@ export class StudentPortfolioService {
                 data.performanceSummary,
                 data.activitiesAchievements,
                 data.areasImprovement,
-                data.teacherRemarks
+                data.disciplineRemarks
             ]
         );
 
@@ -86,7 +86,7 @@ export class StudentPortfolioService {
         performanceSummary?: string;
         activitiesAchievements?: string;
         areasImprovement?: string;
-        teacherRemarks?: string;
+        disciplineRemarks?: string;
     }): Promise<any> {
         const updates: string[] = [];
         const values: any[] = [];
@@ -103,9 +103,9 @@ export class StudentPortfolioService {
             updates.push('areas_improvement = ?');
             values.push(data.areasImprovement);
         }
-        if (data.teacherRemarks !== undefined) {
-            updates.push('teacher_remarks = ?');
-            values.push(data.teacherRemarks);
+        if (data.disciplineRemarks !== undefined) {
+            updates.push('discipline_remarks = ?');
+            values.push(data.disciplineRemarks);
         }
 
         if (updates.length === 0) {

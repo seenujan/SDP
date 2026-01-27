@@ -15,7 +15,7 @@ interface PortfolioEntry {
     performance_summary: string;
     activities_achievements: string;
     areas_improvement: string;
-    teacher_remarks: string;
+    discipline_remarks: string;
     created_at: string;
     teacher_name: string;
 }
@@ -33,7 +33,7 @@ const StudentPortfolio = () => {
         performanceSummary: '',
         activitiesAchievements: '',
         areasImprovement: '',
-        teacherRemarks: ''
+        disciplineRemarks: ''
     });
 
     useEffect(() => {
@@ -86,7 +86,7 @@ const StudentPortfolio = () => {
             performanceSummary: '',
             activitiesAchievements: '',
             areasImprovement: '',
-            teacherRemarks: ''
+            disciplineRemarks: ''
         });
     };
 
@@ -247,14 +247,14 @@ const StudentPortfolio = () => {
                                     />
                                 </div>
 
-                                {/* Teacher Remarks */}
+                                {/* Discipline Remarks */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Teacher Remarks
+                                        Discipline Remarks
                                     </label>
                                     <textarea
-                                        value={formData.teacherRemarks}
-                                        onChange={(e) => setFormData({ ...formData, teacherRemarks: e.target.value })}
+                                        value={formData.disciplineRemarks}
+                                        onChange={(e) => setFormData({ ...formData, disciplineRemarks: e.target.value })}
                                         rows={3}
                                         placeholder="Highly motivated student. Recommended for advanced mathematics stream..."
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -306,10 +306,10 @@ const StudentPortfolio = () => {
                                                 </div>
                                             )}
 
-                                            {entry.teacher_remarks && (
+                                            {entry.discipline_remarks && (
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-700">Teacher Remarks:</p>
-                                                    <p className="text-sm text-gray-600">{entry.teacher_remarks}</p>
+                                                    <p className="text-sm font-medium text-gray-700">Discipline Remarks:</p>
+                                                    <p className="text-sm text-gray-600">{entry.discipline_remarks}</p>
                                                 </div>
                                             )}
                                         </div>

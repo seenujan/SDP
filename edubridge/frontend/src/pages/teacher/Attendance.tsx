@@ -10,7 +10,8 @@ interface Student {
 }
 
 interface Class {
-    id: number;
+    id: number; // This is the class_id from database
+    timetable_id: number; // The specific timetable slot ID
     grade: string;
     section: string;
     class_name: string;
@@ -23,7 +24,7 @@ const Attendance = () => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [dayOfWeek, setDayOfWeek] = useState('');
     const [classes, setClasses] = useState<Class[]>([]);
-    const [selectedClass, setSelectedClass] = useState<number | null>(null);
+    const [selectedTimetableId, setSelectedTimetableId] = useState<number | null>(null);
     const [students, setStudents] = useState<Student[]>([]);
     const [attendance, setAttendance] = useState<{ [key: number]: 'present' | 'absent' | 'late' }>({});
     const [loading, setLoading] = useState(false);
@@ -41,17 +42,17 @@ const Attendance = () => {
         const day = calculateDayOfWeek(selectedDate);
         setDayOfWeek(day);
         fetchClassesForDay(day);
-        setSelectedClass(null);
+        setSelectedTimetableId(null);
         setStudents([]);
     }, [selectedDate]);
 
-    // Fetch students when class is selected
+    // Fetch students when class/timetable slot is selected
     useEffect(() => {
-        if (selectedClass) {
+        if (selectedTimetableId) {
             fetchStudents();
             fetchExistingAttendance();
         }
-    }, [selectedClass]);
+    }, [selectedTimetableId]);
 
     const fetchClassesForDay = async (day: string) => {
         setLoading(true);
@@ -67,11 +68,15 @@ const Attendance = () => {
     };
 
     const fetchStudents = async () => {
-        if (!selectedClass) return;
+        if (!selectedTimetableId) return;
 
         setLoading(true);
         try {
-            const response = await teacherAPI.getClassStudents(selectedClass);
+            // We need classId to fetch students. Find it from the selected timetable slot.
+            const selectedClassData = classes.find(c => c.timetable_id === selectedTimetableId);
+            if (!selectedClassData) return;
+
+            const response = await teacherAPI.getClassStudents(selectedClassData.id);
             setStudents(response.data || []);
 
             // Initialize attendance as all present
@@ -89,10 +94,10 @@ const Attendance = () => {
     };
 
     const fetchExistingAttendance = async () => {
-        if (!selectedClass) return;
+        if (!selectedTimetableId) return;
 
         try {
-            const selectedClassData = classes.find(c => c.id === selectedClass);
+            const selectedClassData = classes.find(c => c.timetable_id === selectedTimetableId);
             if (!selectedClassData) return;
 
             const response = await teacherAPI.getAttendanceHistory(
@@ -102,10 +107,21 @@ const Attendance = () => {
 
             if (response.data && response.data.length > 0) {
                 const existingAttendance: { [key: number]: 'present' | 'absent' | 'late' } = {};
+                // Filter by timetable (or subject) if needed, though getAttendanceHistory currently returns all for the grade/date
+                // Ideally we should filter by specific subject/timetable if the API returns mixed data.
+                // As per refactor, we are using timetable_id, so let's check if API response includes it.
+                // The API calls getClassAttendance which we updated to join timetable.
+
                 response.data.forEach((record: any) => {
-                    existingAttendance[record.student_id] = record.status;
+                    if (record.timetable_id === selectedTimetableId) {
+                        existingAttendance[record.student_id] = record.status;
+                    }
                 });
-                setAttendance(prev => ({ ...prev, ...existingAttendance }));
+
+                // Only merge if we found matching records
+                if (Object.keys(existingAttendance).length > 0) {
+                    setAttendance(prev => ({ ...prev, ...existingAttendance }));
+                }
             }
         } catch (error) {
             console.error('Error fetching attendance history:', error);
@@ -120,12 +136,12 @@ const Attendance = () => {
     };
 
     const handleSaveAttendance = async () => {
-        if (!selectedClass) {
+        if (!selectedTimetableId) {
             alert('Please select a class');
             return;
         }
 
-        const selectedClassData = classes.find(c => c.id === selectedClass);
+        const selectedClassData = classes.find(c => c.timetable_id === selectedTimetableId);
         if (!selectedClassData) return;
 
         setSaving(true);
@@ -134,8 +150,7 @@ const Attendance = () => {
                 studentId: student.id,
                 status: attendance[student.id] || 'present',
                 date: selectedDate,
-                classId: selectedClassData.id,
-                subjectId: selectedClassData.subject_id,
+                timetableId: selectedTimetableId, // use timetable_id
             }));
 
             await teacherAPI.markAttendance(attendanceData);
@@ -147,6 +162,8 @@ const Attendance = () => {
             setSaving(false);
         }
     };
+
+    // ... (helper functions getStatusColor, getStatusIcon remain same)
 
     const getStatusColor = (status: 'present' | 'absent' | 'late') => {
         switch (status) {
@@ -194,14 +211,14 @@ const Attendance = () => {
                                 Select Class
                             </label>
                             <select
-                                value={selectedClass || ''}
-                                onChange={(e) => setSelectedClass(Number(e.target.value) || null)}
+                                value={selectedTimetableId || ''}
+                                onChange={(e) => setSelectedTimetableId(Number(e.target.value) || null)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 disabled={loading || classes.length === 0}
                             >
                                 <option value="">Choose a class...</option>
                                 {classes.map(cls => (
-                                    <option key={`${cls.id}-${cls.subject}`} value={cls.id}>
+                                    <option key={cls.timetable_id} value={cls.timetable_id}>
                                         {cls.class_name} - {cls.subject} ({cls.student_count} students)
                                     </option>
                                 ))}
@@ -228,7 +245,7 @@ const Attendance = () => {
                 </div>
 
                 {/* Student List */}
-                {selectedClass && students.length > 0 && (
+                {selectedTimetableId && students.length > 0 && (
                     <div className="bg-white rounded-lg shadow-sm p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-semibold text-gray-800">
@@ -301,14 +318,14 @@ const Attendance = () => {
                 )}
 
                 {/* Empty States */}
-                {!loading && !selectedClass && (
+                {!loading && !selectedTimetableId && (
                     <div className="bg-white rounded-lg shadow-sm p-12 text-center">
                         <Users size={48} className="mx-auto text-gray-400 mb-4" />
                         <p className="text-gray-500 text-lg">Please select a class to mark attendance</p>
                     </div>
                 )}
 
-                {!loading && selectedClass && students.length === 0 && (
+                {!loading && selectedTimetableId && students.length === 0 && (
                     <div className="bg-white rounded-lg shadow-sm p-12 text-center">
                         <Users size={48} className="mx-auto text-gray-400 mb-4" />
                         <p className="text-gray-500 text-lg">No students found in this class</p>
@@ -320,3 +337,4 @@ const Attendance = () => {
 };
 
 export default Attendance;
+

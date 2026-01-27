@@ -8,7 +8,7 @@ interface PortfolioEntry {
     performance_summary: string;
     activities_achievements: string;
     areas_improvement: string;
-    teacher_remarks: string;
+    discipline_remarks: string;
     created_at: string;
     teacher_name: string;
 }
@@ -106,14 +106,14 @@ const Portfolio = () => {
                                         </div>
                                     </div>
 
-                                    {/* Teacher Remarks */}
+                                    {/* Discipline Remarks */}
                                     <div>
                                         <div className="flex items-center space-x-2 mb-2 text-indigo-600 font-medium">
                                             <MessageSquare size={18} />
-                                            <span>Teacher Remarks</span>
+                                            <span>Discipline Remarks</span>
                                         </div>
                                         <div className="bg-indigo-50/50 p-4 rounded-lg text-sm text-gray-700 min-h-[80px]">
-                                            {entry.teacher_remarks || 'No remarks.'}
+                                            {entry.discipline_remarks || 'No remarks.'}
                                         </div>
                                     </div>
 

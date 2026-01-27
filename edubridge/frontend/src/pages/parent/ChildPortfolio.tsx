@@ -146,10 +146,10 @@ const ChildPortfolio = () => {
                                         <div>
                                             <div className="flex items-center space-x-2 mb-2 text-blue-700">
                                                 <FileText size={20} />
-                                                <h3 className="font-semibold">Teacher Remarks</h3>
+                                                <h3 className="font-semibold">Discipline Remarks</h3>
                                             </div>
                                             <p className="text-gray-600 bg-blue-50 p-3 rounded-lg text-sm leading-relaxed">
-                                                {entry.teacher_remarks}
+                                                {entry.discipline_remarks}
                                             </p>
                                         </div>
                                     </div>

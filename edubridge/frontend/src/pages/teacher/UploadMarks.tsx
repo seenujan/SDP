@@ -44,7 +44,11 @@ const TermMarks = () => {
     const fetchClasses = async () => {
         try {
             const response = await teacherAPI.getMyClasses();
-            setClasses(response.data);
+            // Filter unique classes by ID
+            const uniqueClasses = response.data.filter((cls: any, index: number, self: any[]) =>
+                index === self.findIndex((c) => c.id === cls.id)
+            );
+            setClasses(uniqueClasses);
         } catch (error) {
             console.error('Failed to fetch classes:', error);
         }

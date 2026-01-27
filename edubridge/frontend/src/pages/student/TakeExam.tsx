@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { studentAPI } from '../../services/api';
-import { Clock, CheckCircle, ArrowLeft, ArrowRight, Save, Play, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface Question {
     exam_question_id: number;

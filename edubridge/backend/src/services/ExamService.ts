@@ -150,7 +150,7 @@ class ExamService {
                 teacherId,
                 examData.exam_date,
                 examData.duration,
-                examData.total_marks
+                examData.total_marks || 0
             ]
         );
 
@@ -185,7 +185,7 @@ class ExamService {
             fields.push('duration = ?');
             values.push(examData.duration);
         }
-        if (examData.total_marks) {
+        if (examData.total_marks !== undefined) {
             fields.push('total_marks = ?');
             values.push(examData.total_marks);
         }
@@ -242,6 +242,16 @@ class ExamService {
                 'UPDATE exams SET total_marks = ? WHERE id = ?',
                 [totalMarks, examId]
             );
+        } else {
+            // Use 0 if no questions, or keep existing?
+            // If we are replacing all questions, and questions is empty, total_marks -> 0?
+            // But if it's a manual exam, we might NOT want to override it.
+            // However, addQuestionsToExam implies it IS an online exam with questions.
+            // So updating total_marks here is correct.
+            await pool.execute(
+                'UPDATE exams SET total_marks = 0 WHERE id = ?',
+                [examId]
+            );
         }
 
         return { success: true, question_count: questions.length };
@@ -277,14 +287,26 @@ class ExamService {
         // Verify ownership
         await this.verifyExamOwnership(examId, teacherId);
 
-        // Check if exam has questions
+        // Check if exam has questions OR is manual (has total_marks > 0)
+        // Check questions
         const [questions] = await pool.execute<RowDataPacket[]>(
             'SELECT COUNT(*) as count FROM exam_questions WHERE exam_id = ?',
             [examId]
         );
 
-        if (questions[0].count === 0) {
-            throw new Error('Cannot publish exam without questions');
+        // Check total_marks
+        const [examRes] = await pool.execute<RowDataPacket[]>(
+            'SELECT total_marks FROM exams WHERE id = ?',
+            [examId]
+        );
+        const totalMarks = examRes[0]?.total_marks || 0;
+
+        // Allow publish if it has questions OR has a total_marks set (manual exam)
+        if (questions[0].count === 0 && totalMarks === 0) {
+            // Strict check? Or lenient?
+            // If it's a manual exam, user should have set total_marks.
+            // If they haven't set questions AND total_marks is 0, it's invalid.
+            throw new Error('Cannot publish exam without questions or total marks');
         }
 
         await pool.execute(

@@ -152,7 +152,7 @@ export const teacherAPI = {
     deleteQuestion: (id: number) => api.delete(`/teacher/question-bank/${id}`),
     // Student Portfolio
     getStudentPortfolio: (studentId: number) => api.get(`/teacher/student-portfolio/${studentId}`),
-    addPortfolioEntry: (data: { studentId: number, performanceSummary: string, activitiesAchievements: string, areasImprovement: string, teacherRemarks: string }) =>
+    addPortfolioEntry: (data: { studentId: number, performanceSummary: string, activitiesAchievements: string, areasImprovement: string, disciplineRemarks: string }) =>
         api.post('/teacher/student-portfolio', data),
     // PTM Booking
     getPTMRequests: (status?: string) => api.get('/teacher/ptm-requests', { params: { status } }),

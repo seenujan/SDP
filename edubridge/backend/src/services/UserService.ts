@@ -332,9 +332,8 @@ export class UserService {
     // Get all classes for dropdown
     async getClasses() {
         const [rows] = await pool.query(`
-            SELECT c.id, c.grade, c.section, t.full_name as class_teacher_name
+            SELECT c.id, c.grade, c.section
             FROM classes c
-            LEFT JOIN teachers t ON c.class_teacher_id = t.user_id
             ORDER BY CAST(SUBSTRING(c.grade, 7) AS UNSIGNED), c.section
         `);
         return rows;

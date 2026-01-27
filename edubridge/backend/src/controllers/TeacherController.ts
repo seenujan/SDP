@@ -129,6 +129,7 @@ export class TeacherController {
 
             let query = `
                 SELECT DISTINCT 
+                    t.id as timetable_id,
                     c.id,
                     c.grade,
                     c.section,
@@ -451,8 +452,20 @@ export class TeacherController {
     // Add new portfolio entry
     async addPortfolioEntry(req: AuthRequest, res: Response) {
         try {
-            const teacherId = req.user!.id;
-            const { studentId, performanceSummary, activitiesAchievements, areasImprovement, teacherRemarks } = req.body;
+            const userId = req.user!.id;
+
+            // Get teacher details to find teacher_id
+            const [teachers]: any = await pool.query('SELECT id FROM teachers WHERE user_id = ?', [userId]);
+
+            if (teachers.length === 0) {
+                return res.status(404).json({ error: 'Teacher profile not found' });
+            }
+
+            const teacherId = teachers[0].id;
+            const { studentId, performanceSummary, activitiesAchievements, areasImprovement, disciplineRemarks, teacherRemarks } = req.body;
+
+            // Handle both legacy and new field names from frontend
+            const remarks = disciplineRemarks || teacherRemarks;
 
             const entry = await studentPortfolioService.addPortfolioEntry({
                 studentId,
@@ -460,7 +473,7 @@ export class TeacherController {
                 performanceSummary,
                 activitiesAchievements,
                 areasImprovement,
-                teacherRemarks
+                disciplineRemarks: remarks
             });
 
             res.status(201).json({

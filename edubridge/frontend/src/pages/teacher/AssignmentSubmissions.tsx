@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { FileText, Download, CheckCircle, Clock, User } from 'lucide-react';
+import { FileText, CheckCircle, Clock, User } from 'lucide-react';
 
 interface Submission {
     id: number;

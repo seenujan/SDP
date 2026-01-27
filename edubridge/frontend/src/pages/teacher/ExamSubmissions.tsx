@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { Eye, ArrowLeft, Download } from 'lucide-react';
+import { Eye, ArrowLeft } from 'lucide-react';
 
 interface Submission {
     attempt_id: number;
@@ -75,7 +75,7 @@ const ExamSubmissions = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">{sub.grade} {sub.section}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${sub.status === 'submitted' ? 'bg-green-100 text-green-800' :
-                                                sub.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                                            sub.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
                                             }`}>
                                             {sub.status.replace('_', ' ').toUpperCase()}
                                         </span>

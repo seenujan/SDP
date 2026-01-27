@@ -28,8 +28,9 @@ const ActivateAccount = () => {
             .then(res => {
                 setEmail(res.data.email);
             })
-            .catch(err => {
+            .catch((err: any) => {
                 setError('Invalid or expired activation link.');
+                console.error(err);
             })
             .finally(() => {
                 setVerifying(false);

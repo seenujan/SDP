@@ -109,7 +109,9 @@ export class ParentController {
             const [termMarks]: any = await pool.query(`
                 SELECT tm.*, t.full_name as teacher_name, s.subject_name as subject
                 FROM term_marks tm
-                JOIN teachers t ON tm.teacher_id = t.user_id
+                JOIN students st ON tm.student_id = st.id
+                LEFT JOIN timetable tt ON (st.class_id = tt.class_id AND tm.subject_id = tt.subject_id)
+                LEFT JOIN teachers t ON tt.teacher_id = t.user_id
                 JOIN subjects s ON tm.subject_id = s.id
                 WHERE tm.student_id = ?
                 ORDER BY tm.entered_at DESC
@@ -234,16 +236,6 @@ export class ParentController {
 
             const classId = child[0].class_id;
 
-            // Get Class Teacher
-            const [classTeacher]: any = await pool.query(`
-                SELECT u.id as teacher_id, u.email, t.full_name, s.subject_name as subject, 'Class Teacher' as role
-                FROM classes c
-                JOIN users u ON c.class_teacher_id = u.id
-                JOIN teachers t ON u.id = t.user_id
-                LEFT JOIN subjects s ON t.subject_id = s.id
-                WHERE c.id = ?
-            `, [classId]);
-
             // Get Subject Teachers from Timetable
             const [subjectTeachers]: any = await pool.query(`
                 SELECT u.id as teacher_id, u.email, t.full_name, s.subject_name as subject, 'Subject Teacher' as role
@@ -254,9 +246,8 @@ export class ParentController {
                 WHERE tt.class_id = ?
             `, [classId]);
 
-            // Merge and deduplicate by teacher_id
-            const allTeachers = [...classTeacher, ...subjectTeachers];
-            const uniqueTeachers = Array.from(new Map(allTeachers.map(item => [item.teacher_id, item])).values());
+            // Deduplicate by teacher_id (in case a teacher teaches multiple subjects)
+            const uniqueTeachers = Array.from(new Map(subjectTeachers.map((item: any) => [item.teacher_id, item])).values());
 
             res.json(uniqueTeachers);
         } catch (error: any) {

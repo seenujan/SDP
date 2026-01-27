@@ -6,7 +6,6 @@ import {
     CheckCircle2,
     Circle,
     Calendar,
-    Search,
     X,
     AlertCircle
 } from 'lucide-react';
