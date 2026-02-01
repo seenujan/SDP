@@ -20,6 +20,7 @@ interface User {
     parent_id?: number;
     parent_name?: string;
     active?: number;
+    annual_income?: number;
 }
 
 interface ParentOption {
@@ -74,7 +75,8 @@ const UserManagement = () => {
             dateOfBirth: '',
             parentId: '',
             subjectId: '',
-            phone: ''
+            phone: '',
+            annualIncome: ''
         }
     });
 
@@ -113,7 +115,7 @@ const UserManagement = () => {
             password: '',
             role: 'student',
             fullName: '',
-            additionalData: { grade: '', section: '', dateOfBirth: '', parentId: '', subjectId: '', phone: '' }
+            additionalData: { grade: '', section: '', dateOfBirth: '', parentId: '', subjectId: '', phone: '', annualIncome: '' }
         });
         setError('');
     };
@@ -128,7 +130,8 @@ const UserManagement = () => {
                 await adminAPI.createParent({
                     email: formData.email,
                     fullName: formData.fullName,
-                    phone: formData.additionalData.phone
+                    phone: formData.additionalData.phone,
+                    annualIncome: formData.additionalData.annualIncome
                 });
             } else if (formData.role === 'student') {
                 await adminAPI.createStudent({
@@ -179,7 +182,8 @@ const UserManagement = () => {
                     dateOfBirth: user.date_of_birth ? user.date_of_birth.split('T')[0] : '',
                     parentId: user.parent_id?.toString() || '',
                     subjectId: user.subject ? subjects.find(s => s.subject_name === user.subject)?.id.toString() || '' : '',
-                    phone: user.phone || ''
+                    phone: user.phone || '',
+                    annualIncome: user.annual_income?.toString() || ''
                 }
             });
             setShowEditModal(true);
@@ -362,6 +366,7 @@ const UserManagement = () => {
         { key: 'full_name', header: 'Name' },
         { key: 'email', header: 'Email' },
         { key: 'phone', header: 'Phone', render: (val: string) => val || 'N/A' },
+        { key: 'annual_income', header: 'Annual Income', render: (val: number) => val ? `Rs. ${val.toLocaleString()}` : 'N/A' },
         {
             key: 'active',
             header: 'Status',
@@ -552,18 +557,32 @@ const UserManagement = () => {
 
             {/* Parent Fields */}
             {(formData.role === 'parent' || (isEdit && selectedUser?.role === 'parent')) && (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                    <input
-                        type="tel"
-                        value={formData.additionalData.phone}
-                        onChange={(e) => setFormData({
-                            ...formData, additionalData: { ...formData.additionalData, phone: e.target.value }
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        placeholder="e.g., +94 77 123 4567"
-                    />
-                </div>
+                <>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                        <input
+                            type="tel"
+                            value={formData.additionalData.phone}
+                            onChange={(e) => setFormData({
+                                ...formData, additionalData: { ...formData.additionalData, phone: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            placeholder="e.g., +94 77 123 4567"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Annual Income (Rs.)</label>
+                        <input
+                            type="number"
+                            value={formData.additionalData.annualIncome}
+                            onChange={(e) => setFormData({
+                                ...formData, additionalData: { ...formData.additionalData, annualIncome: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            placeholder="e.g., 500000"
+                        />
+                    </div>
+                </>
             )}
         </>
     );

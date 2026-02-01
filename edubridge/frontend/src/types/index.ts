@@ -38,6 +38,7 @@ export interface Parent {
     user_id: number;
     full_name: string;
     phone: string;
+    annual_income?: number;
     email: string;
 }
 

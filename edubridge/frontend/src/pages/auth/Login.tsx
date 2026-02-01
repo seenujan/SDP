@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import { GraduationCap, Eye, EyeOff } from 'lucide-react';
-import loginIllustration from '../../assets/images/login-illustration-new.jpg';
+import loginIllustration from '../../assets/images/login-illustration-new.png';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -161,7 +161,7 @@ const Login = () => {
 
                 {/* Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-12 z-0">
-                    <div className="w-full max-w-lg mb-8 relative">
+                    <div className="w-full max-w-2xl mb-8 relative">
                         {/* Blob behind image */}
                         <div className="absolute inset-0 bg-blue-100/50 rounded-full filter blur-xl scale-90 translate-y-4"></div>
                         <img

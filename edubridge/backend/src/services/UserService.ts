@@ -89,8 +89,8 @@ export class UserService {
                 );
             } else if (userData.role === 'parent') {
                 await connection.query(
-                    'INSERT INTO parents (user_id, full_name, phone) VALUES (?, ?, ?)',
-                    [userId, userData.fullName, userData.additionalData?.phone || '']
+                    'INSERT INTO parents (user_id, full_name, phone, annual_income) VALUES (?, ?, ?, ?)',
+                    [userId, userData.fullName, userData.additionalData?.phone || '', userData.additionalData?.annualIncome || null]
                 );
             }
 
@@ -159,7 +159,7 @@ export class UserService {
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 sub.subject_name as subject, t.subject_id, t.id as teacher_id,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id, s.id as student_id,
-                COALESCE(p.phone, t.phone) as phone, p.id as parent_id_record
+                COALESCE(p.phone, t.phone) as phone, p.id as parent_id_record, p.annual_income
             FROM users u
             LEFT JOIN teachers t ON u.id = t.user_id
             LEFT JOIN subjects sub ON t.subject_id = sub.id
@@ -260,6 +260,7 @@ export class UserService {
 
                 if (userData.fullName) { updates.push('full_name = ?'); values.push(userData.fullName); }
                 if (userData.additionalData?.phone) { updates.push('phone = ?'); values.push(userData.additionalData.phone); }
+                if (userData.additionalData?.annualIncome !== undefined) { updates.push('annual_income = ?'); values.push(userData.additionalData.annualIncome); }
 
                 if (updates.length > 0) {
                     values.push(id);
@@ -318,7 +319,7 @@ export class UserService {
     async getParents() {
         const [rows] = await pool.query(`
             SELECT 
-                p.id, p.user_id, p.full_name, p.phone,
+                p.id, p.user_id, p.full_name, p.phone, p.annual_income,
                 u.email, u.active, u.created_at
             FROM parents p
             JOIN users u ON p.user_id = u.id
@@ -416,6 +417,11 @@ export class UserService {
 
                 if (profileData.fullName) { updates.push('full_name = ?'); values.push(profileData.fullName); }
                 if (profileData.phone) { updates.push('phone = ?'); values.push(profileData.phone); }
+                // Annual income is usually not updated by user self-update profile logic here, 
+                // but checking the signature of updateProfile, it accepts specific fields. 
+                // If we want parents to update their own income, we'd need to add it to the interface.
+                // For now, I'll leave it as is for updateProfile (self-service) unless requested.
+                // UserManagement (Admin) uses updateUser (above), so that's covered.
 
                 if (updates.length > 0) {
                     values.push(userId);

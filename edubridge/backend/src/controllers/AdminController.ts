@@ -33,7 +33,7 @@ export class AdminController {
 
     async createParent(req: AuthRequest, res: Response) {
         try {
-            const { email, fullName, phone } = req.body;
+            const { email, fullName, phone, annualIncome } = req.body;
             if (!email || !fullName || !phone) {
                 return res.status(400).json({ error: 'Email, Full Name, and Phone are required' });
             }
@@ -42,7 +42,7 @@ export class AdminController {
                 email,
                 role: 'parent',
                 fullName,
-                additionalData: { phone }
+                additionalData: { phone, annualIncome }
             });
             res.status(201).json(user);
         } catch (error: any) {

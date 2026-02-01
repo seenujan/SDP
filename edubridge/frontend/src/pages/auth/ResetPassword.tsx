@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { GraduationCap, ArrowLeft, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import loginIllustration from '../../assets/images/login-illustration-new.jpg';
+import loginIllustration from '../../assets/images/login-illustration-new.png';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -204,7 +204,7 @@ const ResetPassword = () => {
                 <div className="absolute bottom-[-50px] left-[100px] w-64 h-64 bg-indigo-200/30 rounded-full blur-3xl"></div>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-12 z-0">
-                    <div className="w-full max-w-lg mb-8 relative">
+                    <div className="w-full max-w-2xl mb-8 relative">
                         <div className="absolute inset-0 bg-blue-100/50 rounded-full filter blur-xl scale-90 translate-y-4"></div>
                         <img
                             src={loginIllustration}
