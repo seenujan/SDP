@@ -41,18 +41,108 @@ export class TimetableService {
 
     // Get timetable by teacher
     async getTimetableByTeacher(teacherId: number) {
-        const [rows] = await pool.query(`
+        // 1. Get Regular Timetable
+        const [rows]: any = await pool.query(`
             SELECT 
                 t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
                 sub.subject_name as subject,
                 c.grade, c.section,
-                CONCAT(c.grade, ' ', c.section) as class_name
+                CONCAT(c.grade, ' ', c.section) as class_name,
+                FALSE as is_relief
             FROM timetable t
             JOIN classes c ON t.class_id = c.id
             JOIN subjects sub ON t.subject_id = sub.id
             WHERE t.teacher_id = ?
             ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time
         `, [teacherId]);
+
+        // 2. Get Relief Classes (Approved Leaves where I am the Relief Teacher)
+        // We only show relief work for TODAY onwards or recent past to keep it relevant? 
+        // For timetable view typically we show full week. Let's just fetch all valid future/recent ones.
+        // Actually, Timetable usually shows a "Weekly" view. 
+        // We need to map specific dates to "Monday", "Tuesday" etc. if the date falls in the current week?
+        // OR better: The frontend filters by "Day of Week". 
+        // Relief work is DATE specific, not recurring Day of Week specific.
+        // The current frontend just shows a recurring schedule. 
+        // TO FIX: We need to know WHICH WEEK the user is looking at to show relief work correctly.
+        // But the current API doesn't take a date/week param. 
+        // Assumption: The frontend manages "Today" or specific days.
+        // Strategy: We will append relief entries. The frontend might need to handle "Date specific" entries vs "Recurring" entries.
+        // Given the current frontend `getTimetableForDay(day)` structure, it filters by `day_of_week`.
+        // If I return a relief class with `day_of_week = 'Monday'`, it will show up on EVERY Monday. This is bad.
+        // Quick Fix for this architecture: 
+        // We will fetch relief classes for the CURRENT WEEK only (or just return them with a special flag and date).
+        // However, looking at frontend `Timetable.tsx`: `const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });`
+        // It selects a day (e.g., "Monday").
+        // Implementation: We will fetch approved relief leaves that are active.
+        // We will then fetch the applicant's timetable for those days.
+        // AND we will mark them as `is_relief` and maybe attach the specific `date`.
+        // If the frontend only filters by string "Monday", it might show generic relief. 
+        // Let's rely on the frontend to maybe show "Relief (Date)" or similar.
+
+        // Let's fetch relief work for the next 7 days to cover the immediate view.
+
+        try {
+            const [reliefLeaves]: any = await pool.query(`
+                SELECT 
+                    l.id, l.teacher_id as applicant_id, l.start_date, l.end_date, t.full_name as teacher_name
+                FROM teacher_leaves l
+                JOIN teachers t ON l.teacher_id = t.user_id
+                WHERE l.relief_teacher_id = ? 
+                AND l.relief_status = 'Approved'
+                AND l.status != 'cancelled'
+                AND l.end_date >= CURDATE()
+            `, [teacherId]);
+
+            for (const leave of reliefLeaves) {
+                // Determine days covered
+                const start = new Date(leave.start_date);
+                const end = new Date(leave.end_date);
+
+                // Get applicant's timetable
+                const [applicantClasses]: any = await pool.query(`
+                     SELECT 
+                        t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
+                        sub.subject_name as subject,
+                        c.grade, c.section,
+                        CONCAT(c.grade, ' ', c.section) as class_name,
+                        TRUE as is_relief,
+                        ? as original_teacher
+                    FROM timetable t
+                    JOIN classes c ON t.class_id = c.id
+                    JOIN subjects sub ON t.subject_id = sub.id
+                    WHERE t.teacher_id = ?
+                `, [leave.teacher_name, leave.applicant_id]);
+
+                // Filter classes that fall on the leave days
+                // Logic: Check if class.day_of_week matches any day in the leave range
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+                    const classesForDay = applicantClasses.filter((c: any) => c.day_of_week === dayName);
+
+                    // Add distinct entries to rows
+                    // Note: This duplicates if multiple dates map to same day name (e.g. 2 week leave)
+                    // But for a simple timetable view that filters by "Monday", it works.
+                    // Ideally we should send specific DATES. But adapting to existing structure:
+                    classesForDay.forEach((c: any) => {
+                        // Avoid duplicates if already added for another date in same range
+                        // (Though effectively same class)
+                        // For now, simpler is better.
+                        // Only add if not already in rows (check id and is_relief)
+                        const exists = rows.find((r: any) => r.id === c.id && r.is_relief);
+                        if (!exists) {
+                            rows.push({
+                                ...c,
+                                subject: `${c.subject} (Relief: ${leave.teacher_name})`
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching relief timetable:', e);
+        }
+
         return rows;
     }
 

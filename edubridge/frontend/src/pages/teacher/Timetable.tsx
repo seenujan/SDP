@@ -80,10 +80,16 @@ const Timetable = () => {
 
                 {/* Timetable View */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                        <Calendar className="mr-2" size={20} />
-                        {selectedDay}'s Schedule
-                    </h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                            <Calendar className="mr-2" size={20} />
+                            {selectedDay}'s Schedule
+                        </h2>
+                        <div className="flex items-center text-sm text-gray-500">
+                            <span className="w-3 h-3 bg-blue-600 rounded-full mr-1"></span> Regular
+                            <span className="w-3 h-3 bg-orange-500 rounded-full ml-3 mr-1"></span> Relief
+                        </div>
+                    </div>
 
                     {loading ? (
                         <div className="text-center py-8">
@@ -96,12 +102,15 @@ const Timetable = () => {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {getTimetableForDay(selectedDay).map((entry) => (
+                            {getTimetableForDay(selectedDay).map((entry: any) => (
                                 <div
-                                    key={entry.id}
-                                    className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-lg hover:shadow-md transition-shadow"
+                                    key={entry.id + (entry.is_relief ? '_relief' : '')}
+                                    className={`flex items-center p-4 border rounded-lg hover:shadow-md transition-shadow ${entry.is_relief
+                                        ? 'bg-orange-50 border-orange-200'
+                                        : 'bg-gradient-to-r from-blue-50 to-white border-blue-100'
+                                        }`}
                                 >
-                                    <div className="bg-blue-600 text-white w-16 h-16 rounded-lg flex flex-col items-center justify-center mr-4">
+                                    <div className={`${entry.is_relief ? 'bg-orange-500' : 'bg-blue-600'} text-white w-16 h-16 rounded-lg flex flex-col items-center justify-center mr-4`}>
                                         <Clock size={20} />
                                         <span className="text-xs mt-1">Period</span>
                                     </div>
@@ -112,9 +121,14 @@ const Timetable = () => {
                                         <p className="text-sm text-gray-600">
                                             Class: {entry.class_name}
                                         </p>
+                                        {entry.is_relief && (
+                                            <span className="inline-block px-2 py-0.5 mt-1 text-xs font-bold text-orange-700 bg-orange-200 rounded-full">
+                                                Relief Work
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-lg font-semibold text-blue-600">
+                                        <p className={`text-lg font-semibold ${entry.is_relief ? 'text-orange-600' : 'text-blue-600'}`}>
                                             {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                                         </p>
                                         <p className="text-xs text-gray-500 mt-1">

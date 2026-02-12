@@ -3,6 +3,7 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { userController } from '../controllers/UserController';
 import { adminController } from '../controllers/AdminController';
 import { timetableController } from '../controllers/TimetableController';
+import { LeaveController } from '../controllers/LeaveController';
 
 const router = Router();
 
@@ -83,6 +84,11 @@ router.get('/reports/scholarships', (req, res) => adminController.getScholarship
 router.get('/scholarships/eligible', (req, res) => adminController.getEligibleStudents(req, res));
 router.get('/reports/users', (req, res) => adminController.getUserReport(req, res));
 router.get('/reports/ptm-feedback', (req, res) => adminController.getPTMFeedbackReport(req, res));
+
+// Leave Management (Approval)
+router.get('/leave/pending', (req, res) => LeaveController.getPendingLeaves(req, res));
+router.get('/leave/all', (req, res) => LeaveController.getAllLeaves(req, res));
+router.put('/leave/status', (req, res) => LeaveController.updateStatus(req, res));
 
 export default router;
 

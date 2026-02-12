@@ -18,7 +18,9 @@ import AdminStudentPortfolio from './pages/admin/StudentPortfolio';
 import Certificates from './pages/admin/Certificates';
 import ProgressCard from './pages/admin/ProgressCard';
 import Reports from './pages/admin/Reports';
+
 import Scholarships from './pages/admin/Scholarships';
+import LeaveApproval from './pages/admin/LeaveApproval';
 
 // Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -35,7 +37,9 @@ import ExamSubmissions from './pages/teacher/ExamSubmissions';
 import ReviewStudentExam from './pages/teacher/ReviewStudentExam';
 import PTMBooking from './pages/teacher/PTMBooking';
 import TeacherAnnouncements from './pages/teacher/Announcements';
+
 import TeacherEvents from './pages/teacher/Events';
+import LeaveManagement from './pages/teacher/LeaveManagement';
 
 // Student
 import StudentDashboard from './pages/student/Dashboard';
@@ -158,6 +162,14 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="admin">
                                 <Reports />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/leave"
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <LeaveApproval />
                             </ProtectedRoute>
                         }
                     />
@@ -288,6 +300,14 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="teacher">
                                 <TeacherEvents />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/teacher/leave"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <LeaveManagement />
                             </ProtectedRoute>
                         }
                     />

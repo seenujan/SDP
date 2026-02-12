@@ -22,6 +22,7 @@ import {
     TrendingUp,
     CheckSquare,
     TrendingUp as ViewProgress,
+    Clock,
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -41,6 +42,7 @@ const Sidebar = () => {
                     { icon: TrendingUp, label: 'Progress Card Generation', path: '/admin/progress-card' },
                     { icon: BookOpen, label: 'Scholarships', path: '/admin/scholarships' },
                     { icon: BarChart3, label: 'Reports', path: '/admin/reports' },
+                    { icon: Clock, label: 'Leave Management', path: '/admin/leave' },
                 ];
             case 'teacher':
                 return [
@@ -54,6 +56,7 @@ const Sidebar = () => {
                     { icon: CalendarCheck, label: 'PTM Booking', path: '/teacher/ptm-booking' },
                     { icon: School, label: 'Events', path: '/teacher/events' },
                     { icon: Megaphone, label: 'Announcements', path: '/teacher/announcements' },
+                    { icon: Clock, label: 'My Leaves', path: '/teacher/leave' },
                 ];
             case 'student':
                 return [

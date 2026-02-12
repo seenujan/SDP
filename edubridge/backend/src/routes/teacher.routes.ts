@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { teacherController } from '../controllers/TeacherController';
+import { LeaveController } from '../controllers/LeaveController';
+import { timetableController } from '../controllers/TimetableController';
 import { uploadAssignment } from '../middleware/upload';
 
 const router = Router();
@@ -83,5 +85,18 @@ router.get('/events', (req, res) => teacherController.getEvents(req, res));
 router.post('/events', (req, res) => teacherController.createEvent(req, res));
 router.put('/events/:id', (req, res) => teacherController.updateEvent(req, res));
 router.delete('/events/:id', (req, res) => teacherController.deleteEvent(req, res));
+
+// Leave Management
+router.get('/leave/types', (req, res) => LeaveController.getLeaveTypes(req, res));
+router.post('/leave', (req, res) => LeaveController.applyLeave(req, res));
+router.get('/leave/balance', (req, res) => LeaveController.getMyBalance(req, res));
+router.get('/leave/history', (req, res) => LeaveController.getMyHistory(req, res));
+router.put('/leave/:id/cancel', (req, res) => LeaveController.cancelLeave(req, res));
+router.get('/leave/available-relief', (req, res) => LeaveController.getReliefTeachers(req, res));
+router.get('/leave/relief-requests', (req, res) => LeaveController.getReliefRequests(req, res));
+router.put('/leave/relief-requests', (req, res) => LeaveController.respondToReliefRequest(req, res));
+
+// Dropdowns (Reusable from Timetable)
+router.get('/timetable/teachers-dropdown', (req, res) => timetableController.getTeachersForDropdown(req, res));
 
 export default router;
