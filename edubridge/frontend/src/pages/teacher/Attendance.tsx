@@ -46,11 +46,10 @@ const Attendance = () => {
         setStudents([]);
     }, [selectedDate]);
 
-    // Fetch students when class/timetable slot is selected
+    // Fetch data when class/timetable slot is selected
     useEffect(() => {
         if (selectedTimetableId) {
-            fetchStudents();
-            fetchExistingAttendance();
+            loadAttendanceData();
         }
     }, [selectedTimetableId]);
 
@@ -67,64 +66,49 @@ const Attendance = () => {
         }
     };
 
-    const fetchStudents = async () => {
+    const loadAttendanceData = async () => {
         if (!selectedTimetableId) return;
 
         setLoading(true);
         try {
-            // We need classId to fetch students. Find it from the selected timetable slot.
             const selectedClassData = classes.find(c => c.timetable_id === selectedTimetableId);
             if (!selectedClassData) return;
 
-            const response = await teacherAPI.getClassStudents(selectedClassData.id);
-            setStudents(response.data || []);
+            // Fetch students and existing history concurrently with individual error handling
+            const [studentsResponse, historyResponse] = await Promise.all([
+                teacherAPI.getClassStudents(selectedClassData.id).catch(err => {
+                    console.error('Error fetching students:', err);
+                    return { data: [], status: 0 };
+                }),
+                teacherAPI.getAttendanceHistory(selectedClassData.grade, selectedDate).catch(err => {
+                    console.error('Error fetching history:', err);
+                    return { data: [], status: 0 };
+                })
+            ]);
 
-            // Initialize attendance as all present
-            const initialAttendance: { [key: number]: 'present' | 'absent' | 'late' } = {};
-            (response.data || []).forEach((student: Student) => {
-                initialAttendance[student.id] = 'present';
-            });
-            setAttendance(initialAttendance);
-        } catch (error) {
-            console.error('Error fetching students:', error);
-            setStudents([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+            const studentsList = studentsResponse.data || [];
+            if (studentsList.length === 0 && studentsResponse.status !== 200) {
+                // Only clear if it was an actual error and not just an empty class
+                console.warn('Student list might be empty due to fetch error');
+            }
+            setStudents(studentsList);
 
-    const fetchExistingAttendance = async () => {
-        if (!selectedTimetableId) return;
-
-        try {
-            const selectedClassData = classes.find(c => c.timetable_id === selectedTimetableId);
-            if (!selectedClassData) return;
-
-            const response = await teacherAPI.getAttendanceHistory(
-                selectedClassData.grade,
-                selectedDate
-            );
-
-            if (response.data && response.data.length > 0) {
-                const existingAttendance: { [key: number]: 'present' | 'absent' | 'late' } = {};
-                // Filter by timetable (or subject) if needed, though getAttendanceHistory currently returns all for the grade/date
-                // Ideally we should filter by specific subject/timetable if the API returns mixed data.
-                // As per refactor, we are using timetable_id, so let's check if API response includes it.
-                // The API calls getClassAttendance which we updated to join timetable.
-
-                response.data.forEach((record: any) => {
+            // Process existing attendance
+            const existingAttendance: { [key: number]: 'present' | 'absent' | 'late' } = {};
+            if (historyResponse.data && historyResponse.data.length > 0) {
+                historyResponse.data.forEach((record: any) => {
                     if (record.timetable_id === selectedTimetableId) {
                         existingAttendance[record.student_id] = record.status;
                     }
                 });
-
-                // Only merge if we found matching records
-                if (Object.keys(existingAttendance).length > 0) {
-                    setAttendance(prev => ({ ...prev, ...existingAttendance }));
-                }
             }
+            setAttendance(existingAttendance);
         } catch (error) {
-            console.error('Error fetching attendance history:', error);
+            console.error('Error loading attendance data:', error);
+            setStudents([]);
+            setAttendance({});
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -133,6 +117,14 @@ const Attendance = () => {
             ...prev,
             [studentId]: status
         }));
+    };
+
+    const handleMarkAll = (status: 'present' | 'absent' | 'late') => {
+        const updatedAttendance: { [key: number]: 'present' | 'absent' | 'late' } = {};
+        students.forEach(student => {
+            updatedAttendance[student.id] = status;
+        });
+        setAttendance(updatedAttendance);
     };
 
     const handleSaveAttendance = async () => {
@@ -146,12 +138,20 @@ const Attendance = () => {
 
         setSaving(true);
         try {
-            const attendanceData = students.map(student => ({
-                studentId: student.id,
-                status: attendance[student.id] || 'present',
-                date: selectedDate,
-                timetableId: selectedTimetableId, // use timetable_id
-            }));
+            const attendanceData = students
+                .filter(student => attendance[student.id]) // Only include marked students
+                .map(student => ({
+                    studentId: student.id,
+                    status: attendance[student.id],
+                    date: selectedDate,
+                    timetableId: selectedTimetableId,
+                }));
+
+            if (attendanceData.length === 0) {
+                alert('Please mark attendance for at least one student.');
+                setSaving(false);
+                return;
+            }
 
             await teacherAPI.markAttendance(attendanceData);
             alert('Attendance saved successfully!');
@@ -258,6 +258,32 @@ const Attendance = () => {
                             >
                                 <Save size={18} className="mr-2" />
                                 {saving ? 'Saving...' : 'Save Attendance'}
+                            </button>
+                        </div>
+
+                        {/* Mark All Actions */}
+                        <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <span className="text-sm font-medium text-gray-700 self-center mr-2 font-bold uppercase tracking-wider">Fast Action:</span>
+                            <button
+                                onClick={() => handleMarkAll('present')}
+                                className="flex items-center gap-1 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-all text-sm font-bold"
+                            >
+                                <CheckCircle size={16} />
+                                Mark All Present
+                            </button>
+                            <button
+                                onClick={() => handleMarkAll('absent')}
+                                className="flex items-center gap-1 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-all text-sm font-bold"
+                            >
+                                <XCircle size={16} />
+                                Mark All Absent
+                            </button>
+                            <button
+                                onClick={() => handleMarkAll('late')}
+                                className="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all text-sm font-bold"
+                            >
+                                <Clock size={16} />
+                                Mark All Late
                             </button>
                         </div>
 

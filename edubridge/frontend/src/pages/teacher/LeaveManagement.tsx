@@ -326,6 +326,15 @@ const LeaveManagement: React.FC = () => {
                                                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(leave.status)}`}>
                                                             {leave.status}
                                                         </span>
+                                                        {leave.status === 'cancelled' && (
+                                                            <div className="text-xs text-gray-500 mt-1 font-medium">
+                                                                {leave.cancelled_by_role === 'admin'
+                                                                    ? 'Cancelled by Admin'
+                                                                    : leave.cancelled_by_name
+                                                                        ? `Cancelled by ${leave.cancelled_by_name}`
+                                                                        : 'Cancelled'}
+                                                            </div>
+                                                        )}
                                                         {leave.rejection_reason && <div className="text-xs text-red-500 mt-1 max-w-xs truncate" title={leave.rejection_reason}>{leave.rejection_reason}</div>}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -514,7 +523,7 @@ const LeaveManagement: React.FC = () => {
                     </div>
                 )}
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 };
 

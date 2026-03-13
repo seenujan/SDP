@@ -19,6 +19,9 @@ router.get('/child/:childId/attendance', (req, res) =>
 router.get('/child/:childId/progress', (req, res) =>
     parentController.getChildProgress(req, res)
 );
+router.get('/child/:childId/progress-card', (req, res) =>
+    parentController.getChildProgressCard(req, res)
+);
 router.get('/child/:childId/portfolio', (req, res) =>
     parentController.getChildPortfolio(req, res)
 );

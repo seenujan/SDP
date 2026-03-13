@@ -40,6 +40,7 @@ const Timetable = () => {
     const [classes, setClasses] = useState<ClassOption[]>([]);
     const [teachers, setTeachers] = useState<TeacherOption[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | null>(null);
+    const [selectedDay, setSelectedDay] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
     // Modal states
@@ -66,11 +67,11 @@ const Timetable = () => {
 
     useEffect(() => {
         if (selectedClass) {
-            fetchTimetableByClass(selectedClass);
+            fetchTimetableByClass(selectedClass, selectedDay);
         } else {
-            fetchAllTimetable();
+            fetchAllTimetable(selectedDay);
         }
-    }, [selectedClass]);
+    }, [selectedClass, selectedDay]);
 
     const fetchData = async () => {
         try {
@@ -89,18 +90,18 @@ const Timetable = () => {
         }
     };
 
-    const fetchAllTimetable = async () => {
+    const fetchAllTimetable = async (day?: string) => {
         try {
-            const response = await adminAPI.getTimetable();
+            const response = await adminAPI.getTimetable(day);
             setTimetable(response.data);
         } catch (error) {
             console.error('Failed to fetch timetable:', error);
         }
     };
 
-    const fetchTimetableByClass = async (classId: number) => {
+    const fetchTimetableByClass = async (classId: number, day?: string) => {
         try {
-            const response = await adminAPI.getTimetableByClass(classId);
+            const response = await adminAPI.getTimetableByClass(classId, day);
             setTimetable(response.data);
         } catch (error) {
             console.error('Failed to fetch timetable:', error);
@@ -133,9 +134,9 @@ const Timetable = () => {
             setShowAddModal(false);
             resetForm();
             if (selectedClass) {
-                fetchTimetableByClass(selectedClass);
+                fetchTimetableByClass(selectedClass, selectedDay);
             } else {
-                fetchAllTimetable();
+                fetchAllTimetable(selectedDay);
             }
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to create timetable entry');
@@ -174,9 +175,9 @@ const Timetable = () => {
             setSelectedEntry(null);
             resetForm();
             if (selectedClass) {
-                fetchTimetableByClass(selectedClass);
+                fetchTimetableByClass(selectedClass, selectedDay);
             } else {
-                fetchAllTimetable();
+                fetchAllTimetable(selectedDay);
             }
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to update timetable entry');
@@ -194,9 +195,9 @@ const Timetable = () => {
             setShowDeleteModal(false);
             setSelectedEntry(null);
             if (selectedClass) {
-                fetchTimetableByClass(selectedClass);
+                fetchTimetableByClass(selectedClass, selectedDay);
             } else {
-                fetchAllTimetable();
+                fetchAllTimetable(selectedDay);
             }
         } catch (err: any) {
             alert(err.response?.data?.error || 'Failed to delete timetable entry');
@@ -310,19 +311,35 @@ const Timetable = () => {
                     </button>
                 </div>
 
-                {/* Class Filter */}
-                <div className="mb-6 flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-700">Filter by Class:</label>
-                    <select
-                        value={selectedClass || ''}
-                        onChange={(e) => setSelectedClass(e.target.value ? parseInt(e.target.value) : null)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                        <option value="">All Classes</option>
-                        {classes.map((c) => (
-                            <option key={c.id} value={c.id}>{c.grade} {c.section}</option>
-                        ))}
-                    </select>
+                {/* Filters */}
+                <div className="mb-6 flex items-center space-x-6">
+                    <div className="flex items-center space-x-3">
+                        <label className="text-sm font-semibold text-gray-700">Filter by Class:</label>
+                        <select
+                            value={selectedClass || ''}
+                            onChange={(e) => setSelectedClass(e.target.value ? parseInt(e.target.value) : null)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 shadow-sm outline-none bg-white transition-all hover:border-primary-400"
+                        >
+                            <option value="">All Classes</option>
+                            {classes.map((c) => (
+                                <option key={c.id} value={c.id}>{c.grade} {c.section}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                        <label className="text-sm font-semibold text-gray-700">Filter by Day:</label>
+                        <select
+                            value={selectedDay}
+                            onChange={(e) => setSelectedDay(e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 shadow-sm outline-none bg-white transition-all hover:border-primary-400"
+                        >
+                            <option value="">All Days</option>
+                            {DAYS.map((day) => (
+                                <option key={day} value={day}>{day}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 {/* Timetable Table */}

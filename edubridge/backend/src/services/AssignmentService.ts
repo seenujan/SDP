@@ -1,4 +1,5 @@
 import { pool } from '../config/database';
+import { recalculateClassRanks } from './RankService';
 
 export class AssignmentService {
     // Create assignment
@@ -203,6 +204,20 @@ export class AssignmentService {
             );
         }
 
+        // Recalculate class ranks (fire-and-forget)
+        pool.query<any[]>(
+            `SELECT a.class_id FROM assignment_submissions sub
+             JOIN assignments a ON sub.assignment_id = a.id
+             WHERE sub.id = ? LIMIT 1`,
+            [submissionId]
+        ).then(([rows]) => {
+            if (rows.length > 0) {
+                recalculateClassRanks(rows[0].class_id).catch(err =>
+                    console.error('[RankService] Recalculation failed:', err)
+                );
+            }
+        }).catch(() => { });
+
         return { submissionId, marks, feedback };
     }
 
@@ -258,6 +273,17 @@ export class AssignmentService {
             }
 
             await connection.commit();
+
+            // Recalculate class ranks (fire-and-forget)
+            pool.query<any[]>('SELECT class_id FROM assignments WHERE id = ? LIMIT 1', [assignmentId])
+                .then(([rows]: any) => {
+                    if (rows.length > 0) {
+                        recalculateClassRanks(rows[0].class_id).catch(err =>
+                            console.error('[RankService] Recalculation failed:', err)
+                        );
+                    }
+                }).catch(() => { });
+
             return { success: true, message: 'Assignment marks uploaded successfully' };
         } catch (error) {
             await connection.rollback();

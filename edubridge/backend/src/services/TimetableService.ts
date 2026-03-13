@@ -2,8 +2,8 @@ import { pool } from '../config/database';
 
 export class TimetableService {
     // Get all timetable entries
-    async getAllTimetable() {
-        const [rows] = await pool.query(`
+    async getAllTimetable(day?: string) {
+        let query = `
             SELECT 
                 t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
                 sub.subject_name as subject,
@@ -14,16 +14,27 @@ export class TimetableService {
             JOIN classes c ON t.class_id = c.id
             JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN teachers te ON t.teacher_id = te.user_id
+        `;
+        const params: any[] = [];
+
+        if (day) {
+            query += ` WHERE t.day_of_week = ?`;
+            params.push(day);
+        }
+
+        query += `
             ORDER BY CAST(SUBSTRING(c.grade, 7) AS UNSIGNED), c.section, 
                 FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'),
                 t.start_time
-        `);
+        `;
+
+        const [rows] = await pool.query(query, params);
         return rows;
     }
 
     // Get timetable by class
-    async getTimetableByClass(classId: number) {
-        const [rows] = await pool.query(`
+    async getTimetableByClass(classId: number, day?: string) {
+        let query = `
             SELECT 
                 t.id, t.class_id, t.subject_id, t.day_of_week, t.start_time, t.end_time, t.teacher_id,
                 sub.subject_name as subject,
@@ -34,8 +45,17 @@ export class TimetableService {
             JOIN subjects sub ON t.subject_id = sub.id
             LEFT JOIN teachers te ON t.teacher_id = te.user_id
             WHERE t.class_id = ?
-            ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time
-        `, [classId]);
+        `;
+        const params: any[] = [classId];
+
+        if (day) {
+            query += ` AND t.day_of_week = ?`;
+            params.push(day);
+        }
+
+        query += ` ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time`;
+
+        const [rows] = await pool.query(query, params);
         return rows;
     }
 

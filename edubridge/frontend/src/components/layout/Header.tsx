@@ -67,14 +67,65 @@ const Header = () => {
         }
     };
 
+    const getPortalBadgeStyles = (role: string) => {
+        switch (role) {
+            case 'admin': return {
+                bg: 'bg-purple-500/10',
+                text: 'text-purple-600',
+                border: 'border-purple-200/50',
+                dot: 'bg-purple-500'
+            };
+            case 'teacher': return {
+                bg: 'bg-blue-500/10',
+                text: 'text-blue-600',
+                border: 'border-blue-200/50',
+                dot: 'bg-blue-500'
+            };
+            case 'student': return {
+                bg: 'bg-emerald-500/10',
+                text: 'text-emerald-600',
+                border: 'border-emerald-200/50',
+                dot: 'bg-emerald-500'
+            };
+            case 'parent': return {
+                bg: 'bg-orange-500/10',
+                text: 'text-orange-600',
+                border: 'border-orange-200/50',
+                dot: 'bg-orange-500'
+            };
+            default: return {
+                bg: 'bg-gray-500/10',
+                text: 'text-gray-600',
+                border: 'border-gray-200/50',
+                dot: 'bg-gray-500'
+            };
+        }
+    };
+
+    const badgeStyles = user?.role ? getPortalBadgeStyles(user.role) : getPortalBadgeStyles('');
+
     return (
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 z-30 relative shrink-0">
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                    <GraduationCap className="text-white" size={20} />
-                </div>
-                <span className="text-xl font-bold text-gray-800">EduBridge</span>
+        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 flex items-center justify-between px-8 z-30 sticky top-0 shrink-0">
+            {/* Logo & Portal Indicator */}
+            <div className="flex items-center">
+                <Link to="/" className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="text-white" size={20} />
+                    </div>
+                    <span className="text-xl font-bold text-gray-800">EduBridge</span>
+                </Link>
+
+                {user?.role && (
+                    <>
+                        <div className="h-6 w-px bg-gray-200 mx-4" />
+                        <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border backdrop-blur-sm transition-all duration-300 ${badgeStyles.bg} ${badgeStyles.border}`}>
+                            <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.1)] ${badgeStyles.dot}`} />
+                            <span className={`text-[11px] font-bold uppercase tracking-[0.1em] ${badgeStyles.text}`}>
+                                {user.role} Portal
+                            </span>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="flex items-center space-x-6">

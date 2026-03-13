@@ -1,5 +1,6 @@
 import { pool } from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { recalculateClassRanks } from './RankService';
 
 interface ExamData {
     title: string;
@@ -118,7 +119,7 @@ class ExamService {
                 qb.id,
                 qb.question_text,
                 qb.question_type,
-                qb.subject,
+                s.subject_name as subject,
                 qb.topic,
                 qb.difficulty_level,
                 qb.marks as default_marks,
@@ -126,6 +127,7 @@ class ExamService {
                 qb.correct_answer
             FROM exam_questions eq
             JOIN question_bank qb ON eq.question_id = qb.id
+            JOIN subjects s ON qb.subject_id = s.id
             WHERE eq.exam_id = ?
             ORDER BY eq.question_order ASC`,
             [examId]
@@ -504,7 +506,19 @@ class ExamService {
             ['submitted', attemptId]
         );
 
-        // online_exam_marks and total_score updates REMOVED for Strict 3NF
+        // Recalculate class ranks (fire-and-forget)
+        pool.query<RowDataPacket[]>(
+            `SELECT e.class_id FROM student_exam_attempts sea
+             JOIN exams e ON sea.exam_id = e.id
+             WHERE sea.id = ? LIMIT 1`,
+            [attemptId]
+        ).then(([rows]) => {
+            if (rows.length > 0) {
+                recalculateClassRanks(rows[0].class_id).catch(err =>
+                    console.error('[RankService] Recalculation failed:', err)
+                );
+            }
+        }).catch(() => { });
 
         return { success: true, score: totalScore };
     }

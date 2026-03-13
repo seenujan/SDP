@@ -89,6 +89,7 @@ router.get('/reports/ptm-feedback', (req, res) => adminController.getPTMFeedback
 router.get('/leave/pending', (req, res) => LeaveController.getPendingLeaves(req, res));
 router.get('/leave/all', (req, res) => LeaveController.getAllLeaves(req, res));
 router.put('/leave/status', (req, res) => LeaveController.updateStatus(req, res));
+router.put('/leave/:id/cancel', (req, res) => LeaveController.cancelLeave(req, res));
 
 export default router;
 

@@ -13,7 +13,7 @@ class ResultsService {
                 sub.subject_name as subject,
                 e.exam_date,
                 e.total_marks,
-                (
+                @obtained := (
                     SELECT COALESCE(SUM(
                         CASE 
                             WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
@@ -29,21 +29,10 @@ class ResultsService {
                     ORDER BY sea_inner.id DESC LIMIT 1
                 ) as obtained_marks,
                 ROUND(
-                    (
-                        SELECT COALESCE(SUM(
-                            CASE 
-                                WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
-                                WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', LOWER(qb.correct_answer) COLLATE utf8mb4_unicode_ci, '%') THEN qb.marks
-                                ELSE 0 
-                            END
-                        ), 0)
-                        FROM student_exam_answers ans
-                        JOIN question_bank qb ON ans.question_id = qb.id
-                        JOIN student_exam_attempts sea_inner ON ans.attempt_id = sea_inner.id
-                        WHERE sea_inner.student_id = ? AND sea_inner.exam_id = e.id
-                        AND sea_inner.status IN ('submitted', 'evaluated')
-                        ORDER BY sea_inner.id DESC LIMIT 1
-                    ) / e.total_marks * 100, 2
+                    CASE 
+                        WHEN e.total_marks > 0 THEN (@obtained / e.total_marks * 100)
+                        ELSE 0 
+                    END, 2
                 ) as percentage
             FROM exams e
             JOIN subjects sub ON e.subject_id = sub.id
@@ -51,7 +40,7 @@ class ResultsService {
             WHERE sea.student_id = ? AND sea.status IN ('submitted', 'evaluated')
             GROUP BY e.id, e.title, sub.subject_name, e.exam_date, e.total_marks
             ORDER BY e.exam_date DESC`,
-            [studentId, studentId, studentId]
+            [studentId, studentId]
         );
 
         // 2. Assignment Marks

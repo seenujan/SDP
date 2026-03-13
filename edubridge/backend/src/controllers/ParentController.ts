@@ -5,13 +5,15 @@ import { attendanceService } from '../services/AttendanceService';
 import { assignmentService } from '../services/AssignmentService';
 import { studentPortfolioService } from '../services/StudentPortfolioService';
 import { ptmBookingService } from '../services/PTMBookingService';
+import { progressCardService } from '../services/ProgressCardService';
 import { pool } from '../config/database';
 
 export class ParentController {
     // GET /api/parent/dashboard
     async getDashboard(req: AuthRequest, res: Response) {
         try {
-            const data = await dashboardService.getParentDashboard(req.user!.id);
+            const studentId = req.query.studentId ? parseInt(req.query.studentId as string) : undefined;
+            const data = await dashboardService.getParentDashboard(req.user!.id, studentId);
             res.json(data);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
@@ -60,6 +62,33 @@ export class ParentController {
             const submissions = await assignmentService.getStudentSubmissions(childId);
 
             res.json({ submissions });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // GET /api/parent/child/:childId/progress-card
+    async getChildProgressCard(req: AuthRequest, res: Response) {
+        try {
+            const childId = parseInt(req.params.childId);
+            const term = req.query.term as string;
+
+            if (!term) {
+                return res.status(400).json({ error: 'Term is required' });
+            }
+
+            // Verify this child belongs to this parent
+            const [child]: any = await pool.query(
+                'SELECT id FROM students WHERE id = ? AND parent_id = ?',
+                [childId, req.user!.id]
+            );
+
+            if (!child[0]) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            const progressCard = await progressCardService.getTermProgressCard(childId, term);
+            res.json(progressCard);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }
@@ -128,15 +157,19 @@ export class ParentController {
                 return res.status(403).json({ error: 'Access denied' });
             }
 
-            // Fetch Term Marks
+            // Fetch Term Marks - Using GROUP BY to avoid duplicates from multiple timetable slots
             const [termMarks]: any = await pool.query(`
-                SELECT tm.*, t.full_name as teacher_name, s.subject_name as subject
+                SELECT 
+                    tm.*, 
+                    MAX(t.full_name) as teacher_name, 
+                    s.subject_name as subject
                 FROM term_marks tm
                 JOIN students st ON tm.student_id = st.id
                 LEFT JOIN timetable tt ON (st.class_id = tt.class_id AND tm.subject_id = tt.subject_id)
                 LEFT JOIN teachers t ON tt.teacher_id = t.user_id
                 JOIN subjects s ON tm.subject_id = s.id
                 WHERE tm.student_id = ?
+                GROUP BY tm.id
                 ORDER BY tm.entered_at DESC
             `, [childId]);
 

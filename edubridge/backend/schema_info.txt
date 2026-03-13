@@ -1,0 +1,124 @@
+
+--- USERS ---
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "email",
+    "Type": "varchar(100)"
+  },
+  {
+    "Field": "password",
+    "Type": "varchar(255)"
+  },
+  {
+    "Field": "role",
+    "Type": "enum('admin','teacher','student','parent')"
+  },
+  {
+    "Field": "created_at",
+    "Type": "timestamp"
+  },
+  {
+    "Field": "updated_at",
+    "Type": "timestamp"
+  },
+  {
+    "Field": "active",
+    "Type": "tinyint(1)"
+  }
+]
+--- STUDENTS ---
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "user_id",
+    "Type": "int"
+  },
+  {
+    "Field": "full_name",
+    "Type": "varchar(255)"
+  },
+  {
+    "Field": "roll_number",
+    "Type": "varchar(20)"
+  },
+  {
+    "Field": "class_id",
+    "Type": "int"
+  },
+  {
+    "Field": "date_of_birth",
+    "Type": "date"
+  },
+  {
+    "Field": "parent_id",
+    "Type": "int"
+  }
+]
+--- TEACHERS ---
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "user_id",
+    "Type": "int"
+  },
+  {
+    "Field": "full_name",
+    "Type": "varchar(255)"
+  },
+  {
+    "Field": "subject_id",
+    "Type": "int"
+  },
+  {
+    "Field": "phone",
+    "Type": "varchar(20)"
+  }
+]
+--- CLASSES ---
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "grade",
+    "Type": "varchar(50)"
+  },
+  {
+    "Field": "section",
+    "Type": "varchar(10)"
+  }
+]
+--- PARENTS ---
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "user_id",
+    "Type": "int"
+  },
+  {
+    "Field": "full_name",
+    "Type": "varchar(255)"
+  },
+  {
+    "Field": "phone",
+    "Type": "varchar(20)"
+  },
+  {
+    "Field": "annual_income",
+    "Type": "decimal(15,2)"
+  }
+]

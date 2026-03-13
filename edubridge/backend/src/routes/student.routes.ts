@@ -53,4 +53,8 @@ router.get('/timetable', (req, res) => studentController.getTimetable(req, res))
 router.get('/announcements', (req, res) => studentController.getAnnouncements(req, res));
 router.get('/events', (req, res) => studentController.getEvents(req, res));
 
+// Progress
+router.get('/progress', (req, res) => studentController.getMyProgress(req, res));
+router.get('/progress-card', (req, res) => studentController.getMyProgressCard(req, res));
+
 export default router;

@@ -1,52 +1,52 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { TrendingUp, BarChart3, FileText, Award } from 'lucide-react';
+import { studentAPI } from '../../services/api';
+import { UserCircle, TrendingUp, Award, BookOpen, Clock } from 'lucide-react';
 
-interface ProgressData {
-    subject: string;
-    currentGrade: string;
-    averageScore: number;
-    trend: 'up' | 'down' | 'stable';
-    recentScores: number[];
-}
-
-const Progress = () => {
-    const [progressData, setProgressData] = useState<ProgressData[]>([]);
+const StudentProgress = () => {
+    const [selectedTerm, setSelectedTerm] = useState('Term 1');
+    const [progressData, setProgressData] = useState<any>(null);
+    const [summaryData, setSummaryData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<any>(null);
+
+    const terms = ['Term 1', 'Term 2', 'Term 3'];
 
     useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
         fetchProgress();
     }, []);
 
+    useEffect(() => {
+        fetchSummary(selectedTerm);
+    }, [selectedTerm]);
+
     const fetchProgress = async () => {
         try {
-            // For now, using placeholder
-            // Real implementation: const response = await studentAPI.getProgress();
-            const mockProgress: ProgressData[] = [];
-            setProgressData(mockProgress);
+            const response = await studentAPI.getProgress();
+            setProgressData(response.data);
         } catch (error) {
             console.error('Failed to fetch progress:', error);
+        }
+    };
+
+    const fetchSummary = async (term: string) => {
+        setLoading(true);
+        try {
+            const response = await studentAPI.getProgressCard(term);
+            setSummaryData(response.data);
+        } catch (error) {
+            console.error('Failed to fetch summary:', error);
+            setSummaryData(null);
         } finally {
             setLoading(false);
         }
     };
 
-    const getTrendIcon = (trend: string) => {
-        if (trend === 'up') {
-            return <TrendingUp className="text-green-600" size={20} />;
-        } else if (trend === 'down') {
-            return <TrendingUp className="text-red-600 transform rotate-180" size={20} />;
-        }
-        return <div className="w-5 h-0.5 bg-gray-600"></div>;
-    };
-
-    const getTrendColor = (trend: string) => {
-        if (trend === 'up') return 'text-green-600 bg-green-50';
-        if (trend === 'down') return 'text-red-600 bg-red-50';
-        return 'text-gray-600 bg-gray-50';
-    };
-
-    if (loading) {
+    if (loading && !summaryData && !progressData) {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center h-64">
@@ -58,129 +58,177 @@ const Progress = () => {
 
     return (
         <DashboardLayout>
-            <div className="animate-fade-in">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800">View Progress</h1>
-                    <p className="text-gray-600 mt-1">Track your academic performance over time</p>
-                </div>
-
-                {/* Overall Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">Overall GPA</p>
-                                <p className="text-3xl font-bold text-gray-800">0.0</p>
-                            </div>
-                            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                                <Award className="text-primary-600" size={24} />
-                            </div>
-                        </div>
+            <div className="animate-fade-in space-y-6 pb-12">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">My Progress</h1>
+                        <p className="text-gray-600 mt-1">Track your comprehensive academic and attendance growth</p>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">Subjects Tracked</p>
-                                <p className="text-3xl font-bold text-gray-800">{progressData.length}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <BarChart3 className="text-purple-600" size={24} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">Improving Subjects</p>
-                                <p className="text-3xl font-bold text-green-600">
-                                    {progressData.filter(p => p.trend === 'up').length}
-                                </p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="text-green-600" size={24} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Progress by Subject */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                        <BarChart3 size={20} className="mr-2" />
-                        Subject-wise Progress
-                    </h2>
-
-                    {progressData.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                            <p className="text-gray-500 text-lg">No progress data available yet</p>
-                            <p className="text-gray-400 text-sm mt-2">Your progress will be tracked as you complete more assessments</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {progressData.map((subject, idx) => (
-                                <div key={idx} className="border border-gray-200 rounded-lg p-5">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-800 text-lg">{subject.subject}</h3>
-                                            <p className="text-sm text-gray-600 mt-1">Current Grade: {subject.currentGrade}</p>
-                                        </div>
-                                        <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${getTrendColor(subject.trend)}`}>
-                                            {getTrendIcon(subject.trend)}
-                                            <span className="font-semibold text-sm capitalize">{subject.trend}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex-1">
-                                            <p className="text-sm text-gray-600 mb-2">Average Score: {subject.averageScore.toFixed(1)}%</p>
-                                            <div className="w-full bg-gray-200 rounded-full h-3">
-                                                <div
-                                                    className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                                                    style={{ width: `${subject.averageScore}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-bold text-gray-800">{subject.averageScore.toFixed(1)}%</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Recent Scores Mini Chart */}
-                                    {subject.recentScores.length > 0 && (
-                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                            <p className="text-xs text-gray-600 mb-2">Recent Test Scores</p>
-                                            <div className="flex items-end space-x-2 h-16">
-                                                {subject.recentScores.map((score, i) => (
-                                                    <div key={i} className="flex-1 flex flex-col items-center">
-                                                        <div
-                                                            className="w-full bg-primary-500 rounded-t"
-                                                            style={{ height: `${score}%` }}
-                                                        ></div>
-                                                        <span className="text-xs text-gray-600 mt-1">{score}%</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                    <div className="flex items-center space-x-3">
+                        {/* Term Selector */}
+                        <select
+                            value={selectedTerm}
+                            onChange={(e) => setSelectedTerm(e.target.value)}
+                            className="bg-white border text-gray-800 px-4 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                        >
+                            {terms.map((term) => (
+                                <option key={term} value={term}>
+                                    {term}
+                                </option>
                             ))}
-                        </div>
-                    )}
+                        </select>
+                    </div>
                 </div>
 
-                {/* Progress Card Access */}
-                <div className="mt-6 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-xl font-bold mb-2">Progress Card</h3>
-                            <p className="text-primary-100">Download your comprehensive academic progress report</p>
+                {user && (
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-6">
+                        <div className="bg-primary-50 p-3 rounded-full">
+                            <UserCircle size={48} className="text-primary-600" />
                         </div>
-                        <button className="px-6 py-3 bg-white text-primary-600 rounded-lg hover:bg-primary-50 transition-colors font-semibold">
-                            Download Progress Card
-                        </button>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800">{user.full_name}</h2>
+                            <p className="text-gray-500">{user.role.charAt(0).toUpperCase() + user.role.slice(1)} Profile</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Summary Cards */}
+                {summaryData && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                            <div className="bg-blue-50 p-3 rounded-lg text-blue-600">
+                                <TrendingUp size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Total Marks</p>
+                                <p className="text-2xl font-bold">{summaryData.summary.total_marks}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                            <div className="bg-green-50 p-3 rounded-lg text-green-600">
+                                <Award size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Average</p>
+                                <p className="text-2xl font-bold">{summaryData.summary.average}%</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                            <div className="bg-purple-50 p-3 rounded-lg text-purple-600">
+                                <Award size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Class Rank</p>
+                                <p className="text-2xl font-bold">{summaryData.summary.term_rank}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                            <div className="bg-orange-50 p-3 rounded-lg text-orange-600">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Attendance</p>
+                                <p className="text-2xl font-bold">{summaryData.summary.attendance_percentage}%</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Subject-wise Marks Table */}
+                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                                <BookOpen className="mr-2 text-primary-600" size={24} />
+                                {selectedTerm} Progress Summary
+                            </h2>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 text-gray-600 text-sm uppercase font-semibold">
+                                    <tr>
+                                        <th className="px-6 py-4">Subject</th>
+                                        <th className="px-6 py-4 text-center">Term Mark (80%)</th>
+                                        <th className="px-6 py-4 text-center">CA Mark (20%)</th>
+                                        <th className="px-6 py-4 text-center">Final Mark</th>
+                                        <th className="px-6 py-4 text-center">Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {summaryData?.marks && summaryData.marks.length > 0 ? (
+                                        summaryData.marks.map((mark: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-800">{mark.subject_name}</td>
+                                                <td className="px-6 py-4 text-center text-gray-600">{mark.term_mark}</td>
+                                                <td className="px-6 py-4 text-center text-gray-600">{mark.ca_mark}%</td>
+                                                <td className="px-6 py-4 text-center font-bold text-primary-600">{mark.total_mark}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2 py-1 rounded-md text-sm font-bold ${mark.grade === 'A' ? 'bg-green-100 text-green-700' :
+                                                        mark.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                                                            mark.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {mark.grade}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
+                                                No marks recorded for this term yet.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Recent Assignment Activity */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 className="text-lg font-bold text-gray-800 flex items-center">
+                                <TrendingUp className="mr-2 text-primary-600" size={20} />
+                                Recent Assignments
+                            </h2>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[600px] flex-grow">
+                            <div className="space-y-6">
+                                {progressData?.submissions && progressData.submissions.length > 0 ? (
+                                    progressData.submissions.slice(0, 10).map((submission: any) => (
+                                        <div key={submission.id} className="relative pl-6 border-l-2 border-primary-100 pb-2">
+                                            <div className="absolute -left-[9px] top-0 bg-white p-1 rounded-full border-2 border-primary-500">
+                                                <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+                                            </div>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h4 className="font-semibold text-gray-800 text-sm">{submission.assignment_title}</h4>
+                                                    <p className="text-xs text-gray-600">{submission.subject}</p>
+                                                    <p className="text-[10px] text-gray-400 mt-1">{new Date(submission.submitted_at).toLocaleDateString()}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-sm font-bold text-primary-600">
+                                                        {submission.marks ? `${submission.marks}%` : 'Pending'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {submission.feedback && (
+                                                <div className="mt-2 bg-gray-50 p-2 rounded text-[11px] text-gray-600 italic">
+                                                    "{submission.feedback}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-500 text-sm italic py-4">No recent assignment activity.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -188,4 +236,4 @@ const Progress = () => {
     );
 };
 
-export default Progress;
+export default StudentProgress;

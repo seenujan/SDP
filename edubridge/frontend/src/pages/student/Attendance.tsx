@@ -8,7 +8,7 @@ interface AttendanceRecord {
     student_id: number;
     date: string;
     status: 'present' | 'absent' | 'late';
-    class?: string;
+    teacher?: string;
     subject?: string;
 }
 
@@ -148,7 +148,7 @@ const Attendance = () => {
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Student ID</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Class</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Teacher</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
                                 </tr>
                             </thead>
@@ -169,7 +169,7 @@ const Attendance = () => {
                                                 {new Date(record.date).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
-                                                {record.class || '-'}
+                                                {record.teacher || '-'}
                                             </td>
                                             <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
                                                 {record.subject || '-'}

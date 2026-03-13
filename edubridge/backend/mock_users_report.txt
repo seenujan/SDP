@@ -1,0 +1,70 @@
+=============================================================
+              MOCK USER DETAILS REPORT
+         *** Universal Password: Password@123 ***
+=============================================================
+
+
+╔══════════════════════════════════════╗
+║             ADMIN ACCOUNTS           ║
+╚══════════════════════════════════════╝
+  Email: ad@gmail.com
+  Email: admin@example.com
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                      TEACHERS                               ║
+╚══════════════════════════════════════════════════════════════╝
+  Name                         Email                                  Phone           Classes
+  ---------------------------- -------------------------------------- --------------- --------------------
+  john                         geseko4151@ixunbo.com                                  Not assigned
+  Mohan                        teacher1@gmail.com                     0762589765      Not assigned
+  new_teacher                  davino1315@cimario.com                                 Not assigned
+  teacher01                    teacher01@gmail.com                                    Not assigned
+  teacher02                    teacher02@gmail.com                                    Not assigned
+  teacher03                    teacher03@gmail.com                                    Grade 10-B, Grade 2-A, Grade 2-B, Grade 4-B
+  teacher04                    teacher04@gmail.com                                    Not assigned
+  teacher05                    teacher05@gmail.com                                    Not assigned
+  vidhyashini                  depote1928@1200b.com                                   Not assigned
+
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        STUDENTS                                                    ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+  Student Name                 Student Email                          Roll No    Class    Parent Name               Parent Email
+  ---------------------------- -------------------------------------- ---------- -------- ------------------------- -----------------------------------
+  Student 53-1                 student_53_1@test.com                  R-53-1     Grade 1-A                           N/A
+  Student 53-2                 student_53_2@test.com                  R-53-2     Grade 1-A                           N/A
+  Student 53-3                 student_53_3@test.com                  R-53-3     Grade 1-A                           N/A
+  Student 53-4                 student_53_4@test.com                  R-53-4     Grade 1-A                           N/A
+  Student 53-5                 student_53_5@test.com                  R-53-5     Grade 1-A                           N/A
+  Student 54-1                 student_54_1@test.com                  R-54-1     Grade 1-B                           N/A
+  Student 54-2                 student_54_2@test.com                  R-54-2     Grade 1-B                           N/A
+  Student 54-3                 student_54_3@test.com                  R-54-3     Grade 1-B                           N/A
+  Student 54-4                 student_54_4@test.com                  R-54-4     Grade 1-B                           N/A
+  Student 54-5                 student_54_5@test.com                  R-54-5     Grade 1-B                           N/A
+  student08                    student08@gmail.com                    Grade 10-A-01 Grade 10-A parent13                  parent13@gmail.com
+  student09                    student09@gmail.com                    Grade 10-A-02 Grade 10-A parent14                  parent14@gmail.com
+  student10                    student10@gmail.com                    Grade 10-A-03 Grade 10-A parent15                  parent15@gmail.com
+  Student 72-1                 student_72_1@test.com                  R-72-1     Grade 10-B                           N/A
+  Student 72-2                 student_72_2@test.com                  R-72-2     Grade 10-B                           N/A
+  Student 72-3                 student_72_3@test.com                  R-72-3     Grade 10-B                           N/A
+  Student 72-4                 student_72_4@test.com                  R-72-4     Grade 10-B                           N/A
+  Student 72-5                 student_72_5@test.com                  R-72-5     Grade 10-B                           N/A
+  student11                    student11@gmail.com                    Grade 2-B-01 Grade 2-B                           N/A
+  student12                    student12@gmail.com                    Grade 2-B-02 Grade 2-B                           N/A
+  student13                    student13@gmail.com                    Grade 2-B-03 Grade 2-B                           N/A
+  rajubhai                     student1@gmail.com                     4B-01      Grade 4-B                           N/A
+  student01                    student01@gmail.com                    Grade 4-B-01 Grade 4-B parent06                  parent06@gmail.com
+  student02                    student02@gmail.com                    Grade 4-B-02 Grade 4-B parent07                  parent07@gmail.com
+  student03                    student03@gmail.com                    Grade 4-B-03 Grade 4-B parent08                  parent08@gmail.com
+  student04                    student04@gmail.com                    Grade 4-B-04 Grade 4-B parent09                  parent09@gmail.com
+  student05                    student05@gmail.com                    Grade 5-A-01 Grade 5-A parent10                  parent10@gmail.com
+  student06                    student06@gmail.com                    Grade 5-A-02 Grade 5-A parent11                  parent11@gmail.com
+  student07                    student07@gmail.com                    Grade 5-A-03 Grade 5-A parent12                  parent12@gmail.com
+  student15                    student15@gmail.com                    Grade 5-C-02 Grade 5-A                           N/A
+  student14                    student14@gmail.com                    Grade 5-C-01 Grade 5-B                           N/A
+
+
+=============================================================
+  Total Admins: 2  |  Total Teachers: 9  |  Total Students: 31
+=============================================================

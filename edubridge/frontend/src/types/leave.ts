@@ -33,7 +33,8 @@ export interface TeacherLeave {
     rejection_reason?: string;
     created_at: string;
     applicant_name?: string; // For relief requests view
-
+    cancelled_by_role?: 'admin' | 'teacher';
+    cancelled_by_name?: string;
 }
 
 export interface LeaveApplicationPayload {

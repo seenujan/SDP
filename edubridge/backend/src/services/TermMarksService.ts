@@ -1,6 +1,7 @@
 import { pool } from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { notificationService } from './NotificationService';
+import { recalculateClassRanks } from './RankService';
 
 interface TermMarkEntry {
     student_id: number;
@@ -49,6 +50,20 @@ export class TermMarksService {
             }
 
             await connection.commit();
+
+            // Recalculate class ranks after marks change (fire-and-forget)
+            if (marksData.length > 0) {
+                const [studentRow] = await pool.query<RowDataPacket[]>(
+                    'SELECT class_id FROM students WHERE id = ? LIMIT 1',
+                    [marksData[0].student_id]
+                );
+                if (studentRow.length > 0) {
+                    recalculateClassRanks(studentRow[0].class_id).catch(err =>
+                        console.error('[RankService] Recalculation failed:', err)
+                    );
+                }
+            }
+
             return { success: true, message: 'Term marks uploaded successfully' };
         } catch (error) {
             await connection.rollback();

@@ -28,6 +28,7 @@ const Results = () => {
     };
 
     const getGradeInfo = (percentage: number) => {
+        if (isNaN(percentage)) return { grade: '-', color: 'text-gray-500 bg-gray-100' };
         if (percentage >= 90) return { grade: 'A+', color: 'text-green-700 bg-green-100' };
         if (percentage >= 80) return { grade: 'A', color: 'text-green-600 bg-green-50' };
         if (percentage >= 70) return { grade: 'B', color: 'text-blue-700 bg-blue-100' };
@@ -47,10 +48,13 @@ const Results = () => {
     }
 
     // Stats Logic - Only for Exams since they have percentages
-    const examPercentages = data.exams.map(e => parseFloat(e.percentage));
+    const examPercentages = data.exams
+        .map(e => parseFloat(e.percentage))
+        .filter(p => !isNaN(p));
+
     const avgExam = examPercentages.length ? (examPercentages.reduce((a, b) => a + b, 0) / examPercentages.length) : 0;
     const maxExam = examPercentages.length ? Math.max(...examPercentages) : 0;
-    const totalItems = data.exams.length + data.assignments.length + data.terms.length;
+    const totalItems = (data.exams?.length || 0) + (data.assignments?.length || 0) + (data.terms?.length || 0);
 
     return (
         <DashboardLayout>

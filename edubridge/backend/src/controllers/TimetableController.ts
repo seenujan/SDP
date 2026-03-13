@@ -6,7 +6,8 @@ export class TimetableController {
     // GET /api/admin/timetable - Get all timetable entries
     async getAllTimetable(req: AuthRequest, res: Response) {
         try {
-            const timetable = await timetableService.getAllTimetable();
+            const day = req.query.day as string;
+            const timetable = await timetableService.getAllTimetable(day);
             res.json(timetable);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
@@ -16,7 +17,8 @@ export class TimetableController {
     // GET /api/admin/timetable/class/:classId - Get timetable for a specific class
     async getTimetableByClass(req: AuthRequest, res: Response) {
         try {
-            const timetable = await timetableService.getTimetableByClass(parseInt(req.params.classId));
+            const day = req.query.day as string;
+            const timetable = await timetableService.getTimetableByClass(parseInt(req.params.classId), day);
             res.json(timetable);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

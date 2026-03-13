@@ -1,0 +1,13 @@
+﻿Γ£à students: OK (1 rows)
+Γ£à teachers: OK (1 rows)
+Γ£à parents: OK (1 rows)
+Γ£à attendance: OK (1 rows)
+Γ£à pendingLeaves: OK (1 rows)
+Γ£à announcements: OK (2 rows)
+Γ£à exams: OK (0 rows)
+Γ£à certs: OK (1 rows)
+Γ£à events: OK (0 rows)
+Γ£à attendance_chart: OK (0 rows)
+
+--- Summary ---
+OK: students, teachers, parents, attendance, pendingLeaves, announcements, exams, certs, events, attendance_chart

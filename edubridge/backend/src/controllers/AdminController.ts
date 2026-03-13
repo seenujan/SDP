@@ -7,6 +7,7 @@ import { studentPortfolioService } from '../services/StudentPortfolioService';
 import certificateService from '../services/CertificateService';
 import { reportService } from '../services/ReportService';
 import { subjectService } from '../services/SubjectService';
+import { progressCardService } from '../services/ProgressCardService';
 
 export class AdminController {
     // User Management
@@ -336,26 +337,16 @@ export class AdminController {
     async getProgressCardData(req: AuthRequest, res: Response) {
         try {
             const studentId = parseInt(req.params.studentId);
-            const termId = req.query.termId ? parseInt(req.query.termId as string) : undefined;
+            const term = req.query.term as string || 'Term 1';
 
-            // Get student info
-            const studentInfo = await studentPortfolioService.getStudentPortfolio(studentId);
-
-            // Get marks (you'll need to implement this based on your marks table structure)
-            // For now, returning placeholder
-            const progressData = {
-                student: studentInfo.student,
-                portfolio: studentInfo.portfolioEntries,
-                // TODO: Add marks and attendance data when those services are available
-                marks: [],
-                attendance: {}
-            };
+            const progressData = await progressCardService.getTermProgressCard(studentId, term);
 
             res.json(progressData);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }
     }
+
     // Reports
     async getAttendanceReport(req: AuthRequest, res: Response) {
         try {

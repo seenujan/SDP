@@ -1,0 +1,30 @@
+[
+  {
+    "Field": "id",
+    "Type": "int"
+  },
+  {
+    "Field": "class_id",
+    "Type": "int"
+  },
+  {
+    "Field": "day_of_week",
+    "Type": "enum('Monday','Tuesday','Wednesday','Thursday','Friday')"
+  },
+  {
+    "Field": "start_time",
+    "Type": "time"
+  },
+  {
+    "Field": "end_time",
+    "Type": "time"
+  },
+  {
+    "Field": "teacher_id",
+    "Type": "int"
+  },
+  {
+    "Field": "subject_id",
+    "Type": "int"
+  }
+]

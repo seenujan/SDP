@@ -115,9 +115,9 @@ export class LeaveController {
 
     static async cancelLeave(req: Request, res: Response) {
         try {
-            const teacherId = (req as any).user.id;
+            const userId = (req as any).user.id;
             const leaveId = parseInt(req.params.id);
-            await LeaveService.cancelLeave(leaveId, teacherId);
+            await LeaveService.cancelLeave(leaveId, userId);
             res.json({ message: 'Leave application cancelled successfully' });
         } catch (error: any) {
             res.status(400).json({ error: error.message });

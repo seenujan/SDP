@@ -10,7 +10,49 @@ import { announcementService, eventService } from '../services/AnnouncementServi
 import { pool } from '../config/database';
 
 export class StudentController {
-    // ... existing methods ...
+    // GET /api/student/progress
+    async getMyProgress(req: AuthRequest, res: Response) {
+        try {
+            const [student]: any = await pool.query(
+                'SELECT id FROM students WHERE user_id = ?',
+                [req.user!.id]
+            );
+
+            if (!student || student.length === 0) {
+                return res.status(404).json({ error: 'Student profile not found' });
+            }
+
+            const submissions = await assignmentService.getStudentSubmissions(student[0].id);
+            res.json({ submissions });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // GET /api/student/progress-card
+    async getMyProgressCard(req: AuthRequest, res: Response) {
+        try {
+            const { term } = req.query;
+            if (!term) {
+                return res.status(400).json({ error: 'Term is required' });
+            }
+
+            const [student]: any = await pool.query(
+                'SELECT id FROM students WHERE user_id = ?',
+                [req.user!.id]
+            );
+
+            if (!student || student.length === 0) {
+                return res.status(404).json({ error: 'Student profile not found' });
+            }
+
+            const { progressCardService } = require('../services/ProgressCardService');
+            const progressCard = await progressCardService.getTermProgressCard(student[0].id, term as string);
+            res.json(progressCard);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
     // GET /api/student/dashboard
     async getDashboard(req: AuthRequest, res: Response) {
         try {

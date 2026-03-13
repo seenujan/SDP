@@ -105,29 +105,38 @@ export class LeaveService {
     }
 
     // Cancel Leave
-    static async cancelLeave(leaveId: number, teacherId: number) {
-        // Verify ownership and status
+    static async cancelLeave(leaveId: number, cancelledByUserId: number) {
+        // Verify existence
         const [leaves] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM teacher_leaves WHERE id = ? AND teacher_id = ?',
-            [leaveId, teacherId]
+            'SELECT * FROM teacher_leaves WHERE id = ?',
+            [leaveId]
         );
 
         if (leaves.length === 0) throw new Error('Leave application not found.');
         const leave = leaves[0];
+
+        // Authorization Check: Must be the applicant OR an Admin
+        // We need to check role of cancelledByUserId
+        const [users] = await pool.query<RowDataPacket[]>('SELECT role FROM users WHERE id = ?', [cancelledByUserId]);
+        const userRole = users[0]?.role;
+
+        if (leave.teacher_id !== cancelledByUserId && userRole !== 'admin') {
+            throw new Error('Unauthorized to cancel this leave.');
+        }
 
         if (leave.status === 'rejected' || leave.status === 'cancelled') {
             throw new Error('Leave is already processed/cancelled.');
         }
 
         // Cancel
-        await pool.query('UPDATE teacher_leaves SET status = "cancelled" WHERE id = ?', [leaveId]);
+        await pool.query('UPDATE teacher_leaves SET status = "cancelled", cancelled_by = ? WHERE id = ?', [cancelledByUserId, leaveId]);
 
         // Notify Relief Teacher if they were approved/pending
         if (leave.relief_teacher_id) {
             await notificationService.createNotification(
                 leave.relief_teacher_id,
                 'Relief Request Cancelled',
-                'The leave application requiring your relief work has been cancelled by the applicant.',
+                'The leave application requiring your relief work has been cancelled.',
                 'leave_update'
             );
         }
@@ -181,11 +190,15 @@ export class LeaveService {
         const [rows] = await pool.query<RowDataPacket[]>(
             `SELECT l.*, 
                     rt.full_name as relief_teacher_name,
-                    lt.name as leave_type_name
+                    lt.name as leave_type_name,
+                    u_cancel.role as cancelled_by_role,
+                    t_cancel.full_name as cancelled_by_name
              FROM teacher_leaves l
              JOIN teachers t ON l.teacher_id = t.user_id
              LEFT JOIN teachers rt ON l.relief_teacher_id = rt.user_id
              JOIN leave_types lt ON l.leave_type_id = lt.id
+             LEFT JOIN users u_cancel ON l.cancelled_by = u_cancel.id
+             LEFT JOIN teachers t_cancel ON l.cancelled_by = t_cancel.user_id
              WHERE l.teacher_id = ?
              ORDER BY l.created_at DESC`,
             [teacherId]
@@ -251,11 +264,15 @@ export class LeaveService {
             `SELECT l.*, 
                     t.full_name as teacher_name, 
                     rt.full_name as relief_teacher_name,
-                    lt.name as leave_type_name
+                    lt.name as leave_type_name,
+                    u_cancel.role as cancelled_by_role,
+                    t_cancel.full_name as cancelled_by_name
              FROM teacher_leaves l
              JOIN teachers t ON l.teacher_id = t.user_id
              LEFT JOIN teachers rt ON l.relief_teacher_id = rt.user_id
              JOIN leave_types lt ON l.leave_type_id = lt.id
+             LEFT JOIN users u_cancel ON l.cancelled_by = u_cancel.id
+             LEFT JOIN teachers t_cancel ON l.cancelled_by = t_cancel.user_id
              ORDER BY l.created_at DESC`
         );
         return await this.attachClassNames(rows);

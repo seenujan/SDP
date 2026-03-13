@@ -112,4 +112,9 @@ export interface DashboardStats {
     studentsPresentToday?: number;
     attendance?: number;
     children?: any[];
+    // Admin dashboard extras
+    pendingLeavesCount?: number;
+    recentAnnouncements?: any[];
+    certificatesThisMonth?: number;
+    attendanceChartData?: { day: string; label: string; present: number; absent: number; late: number }[];
 }

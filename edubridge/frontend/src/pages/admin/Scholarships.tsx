@@ -88,7 +88,7 @@ const Scholarships = () => {
                             >
                                 <option value="">All Grades</option>
                                 {[...Array(13)].map((_, i) => (
-                                    <option key={i + 1} value={String(i + 1)}>
+                                    <option key={i + 1} value={`Grade ${i + 1}`}>
                                         Grade {i + 1}
                                     </option>
                                 ))}

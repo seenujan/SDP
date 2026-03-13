@@ -108,12 +108,19 @@ const Exams = () => {
         }
     }, [showModal, step, questionFilters]);
 
+    // Ensure dropdowns are loaded when modal opens
     useEffect(() => {
-        if (subjects.length > 0) {
-            // Auto-select the first (and only) subject
+        if (showModal && (classes.length === 0 || subjects.length === 0)) {
+            fetchDropdowns();
+        }
+    }, [showModal, classes.length, subjects.length]);
+
+    useEffect(() => {
+        if (subjects.length > 0 && !formData.subject_id) {
+            // Auto-select the first subject if none selected
             setFormData(prev => ({ ...prev, subject_id: subjects[0].id.toString() }));
         }
-    }, [subjects]);
+    }, [subjects, formData.subject_id]);
 
     const handleNextStep = () => {
         if (step === 1) {
@@ -443,7 +450,9 @@ const Exams = () => {
                             <div className="sticky top-0 bg-white border-b px-8 py-6 z-10">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-800">Create New Exam</h2>
+                                        <h2 className="text-2xl font-bold text-gray-800">
+                                            {editingExamId ? 'Edit Exam' : 'Create New Exam'}
+                                        </h2>
                                         <p className="text-sm text-gray-500 mt-1">
                                             {step === 1 ? 'Step 1: Basic Information' : 'Step 2: Select Questions'}
                                         </p>
@@ -486,7 +495,10 @@ const Exams = () => {
                                                 <input
                                                     type="text"
                                                     disabled
-                                                    value={subjects.find(s => s.id.toString() === formData.subject_id)?.subject_name || 'Loading...'}
+                                                    value={
+                                                        subjects.find(s => s.id.toString() === formData.subject_id)?.subject_name || 
+                                                        (subjects.length > 0 ? subjects[0].subject_name : 'Loading...')
+                                                    }
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                                                 />
                                             </div>
@@ -504,8 +516,8 @@ const Exams = () => {
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                                                 >
                                                     <option value="">Select Class</option>
-                                                    {classes.map((cls) => (
-                                                        <option key={cls.id} value={cls.id}>
+                                                    {classes.map((cls, idx) => (
+                                                        <option key={`${cls.id}-${idx}`} value={cls.id}>
                                                             {cls.class_name} ({cls.student_count || 0} students)
                                                         </option>
                                                     ))}
@@ -725,7 +737,7 @@ const Exams = () => {
                                             className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2"
                                         >
                                             <Check size={16} />
-                                            <span>Create Exam</span>
+                                            <span>{editingExamId ? 'Update Exam' : 'Create Exam'}</span>
                                         </button>
                                     )}
                                 </div>

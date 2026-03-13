@@ -67,8 +67,8 @@ export const adminAPI = {
     getParentsDropdown: () => api.get('/admin/users/parents-dropdown'),
     getClasses: () => api.get('/admin/classes'),
     // Timetable
-    getTimetable: () => api.get('/admin/timetable'),
-    getTimetableByClass: (classId: number) => api.get(`/admin/timetable/class/${classId}`),
+    getTimetable: (day?: string) => api.get('/admin/timetable', { params: { day } }),
+    getTimetableByClass: (classId: number, day?: string) => api.get(`/admin/timetable/class/${classId}`, { params: { day } }),
     getTimetableById: (id: number) => api.get(`/admin/timetable/${id}`),
     createTimetable: (data: any) => api.post('/admin/timetable', data),
     updateTimetable: (id: number, data: any) => api.put(`/admin/timetable/${id}`, data),
@@ -97,8 +97,8 @@ export const adminAPI = {
     createCertificate: (data: any) => api.post('/admin/certificates', data),
     deleteCertificate: (id: number) => api.delete(`/admin/certificates/${id}`),
     // Progress Card Generation
-    getProgressCardData: (studentId: number, termId?: number) =>
-        api.get(`/admin/progress-card/${studentId}`, { params: { termId } }),
+    getProgressCardData: (studentId: number, term: string) =>
+        api.get(`/admin/progress-card/${studentId}`, { params: { term } }),
     // Reports
     getAttendanceReport: (classId: string, startDate: string, endDate: string) =>
         api.get('/admin/reports/attendance', { params: { classId, startDate, endDate } }),
@@ -206,15 +206,19 @@ export const studentAPI = {
     getPortfolio: () => api.get('/student/portfolio'),
     getTimetable: () => api.get('/student/timetable'),
     getEvents: () => api.get('/student/events'),
+    getProgress: () => api.get('/student/progress'),
+    getProgressCard: (term: string) => api.get('/student/progress-card', { params: { term } }),
 };
 
 // Parent API
 export const parentAPI = {
-    getDashboard: () => api.get('/parent/dashboard'),
+    getDashboard: (childId?: number) => api.get('/parent/dashboard', { params: { studentId: childId } }),
     getChildAttendance: (childId: number) =>
         api.get(`/parent/child/${childId}/attendance`),
     getChildProgress: (childId: number) =>
         api.get(`/parent/child/${childId}/progress`),
+    getChildProgressCard: (childId: number, term: string) =>
+        api.get(`/parent/child/${childId}/progress-card`, { params: { term } }),
     getChildPortfolio: (childId: number) =>
         api.get(`/parent/child/${childId}/portfolio`),
     getChildResults: (childId: number) =>

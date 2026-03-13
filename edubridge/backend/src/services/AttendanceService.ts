@@ -102,7 +102,19 @@ export class AttendanceService {
     // Get attendance for a student
     async getStudentAttendance(studentId: number) {
         const [rows] = await pool.query(
-            `SELECT * FROM attendance WHERE student_id = ? ORDER BY date DESC`,
+            `SELECT 
+                a.id,
+                a.student_id,
+                a.status,
+                a.date,
+                sub.subject_name as subject,
+                te.full_name as teacher
+            FROM attendance a
+            JOIN timetable t ON a.timetable_id = t.id
+            JOIN subjects sub ON t.subject_id = sub.id
+            LEFT JOIN teachers te ON t.teacher_id = te.user_id
+            WHERE a.student_id = ? 
+            ORDER BY a.date DESC`,
             [studentId]
         );
 
@@ -121,13 +133,14 @@ export class AttendanceService {
         a.*, 
         s.full_name,
         s.roll_number,
-        s.section,
+        c.section,
         sub.subject_name as subject
       FROM attendance a
       JOIN students s ON a.student_id = s.id
       JOIN timetable t ON a.timetable_id = t.id
+      JOIN classes c ON t.class_id = c.id
       JOIN subjects sub ON t.subject_id = sub.id
-      WHERE s.grade = ? AND a.date = ?
+      WHERE c.grade = ? AND a.date = ?
       ORDER BY s.roll_number, s.full_name`,
             [grade, date]
         );

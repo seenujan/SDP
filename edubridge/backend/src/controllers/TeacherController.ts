@@ -37,14 +37,31 @@ export class TeacherController {
     // Subjects
     async getAllSubjects(req: AuthRequest, res: Response) {
         try {
-            const [subjects] = await pool.query(`
-                SELECT s.* 
+            const userId = req.user?.id;
+            
+            // Try very simple query first to see if it works
+            const [allSubjectsRows]: any = await pool.query(`SELECT * FROM subjects`);
+            const allSubjects = allSubjectsRows as any[];
+            console.log('ALL Subjects in DB:', allSubjects);
+
+            // Filtering query
+            const [subjectsRows]: any = await pool.query(`
+                SELECT DISTINCT s.* 
                 FROM subjects s
-                JOIN teachers t ON t.subject_id = s.id
-                WHERE t.user_id = ?
-            `, [req.user!.id]);
-            res.json(subjects);
+                JOIN timetable t ON t.subject_id = s.id
+                WHERE t.teacher_id = ?
+            `, [userId]);
+            const subjects = subjectsRows as any[];
+            
+            console.log('Filtered Subjects for', userId, ':', subjects);
+
+            // Log to a file we can read
+            const fs = require('fs');
+            fs.appendFileSync('subjects_debug.txt', `${new Date().toISOString()} - User ID: ${userId}, All: ${allSubjects.length}, Filtered: ${subjects.length}\n`);
+            
+            res.json(subjects.length > 0 ? subjects : allSubjects); // Fallback to ALL if filtered is empty for debugging
         } catch (error: any) {
+            console.error('Error in getAllSubjects:', error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -129,7 +146,6 @@ export class TeacherController {
 
             let query = `
                 SELECT DISTINCT 
-                    t.id as timetable_id,
                     c.id,
                     c.grade,
                     c.section,
@@ -263,6 +279,9 @@ export class TeacherController {
             );
             res.json(exam);
         } catch (error: any) {
+            if (error.message === 'Exam not found') {
+                return res.status(404).json({ error: error.message });
+            }
             res.status(500).json({ error: error.message });
         }
     }
