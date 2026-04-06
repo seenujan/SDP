@@ -15,6 +15,25 @@ interface Question {
     created_at?: string;
 }
 
+/**
+ * Safely parses options stored in DB — handles both normal JSON arrays
+ * AND double-encoded strings caused by a previous bug (JSON.stringify called twice).
+ */
+function safeParseOptions(raw: string | null): string[] | null {
+    if (!raw) return null;
+    try {
+        const first = JSON.parse(raw);
+        if (Array.isArray(first)) return first;          // normal case: already an array
+        if (typeof first === 'string') {
+            const second = JSON.parse(first);             // double-encoded case
+            if (Array.isArray(second)) return second;
+        }
+    } catch {
+        /* ignore malformed data */
+    }
+    return null;
+}
+
 export class QuestionBankService {
     // Get all questions (visible to all teachers)
     async getAllQuestions(requestingUserId: number, filters?: any): Promise<any[]> {
@@ -56,7 +75,7 @@ export class QuestionBankService {
         // Parse options and add ownership flag
         return questions.map(q => ({
             ...q,
-            options: q.options ? JSON.parse(q.options) : null,
+            options: safeParseOptions(q.options),
             is_owner: q.teacher_id === requestingUserId
         }));
     }
@@ -76,13 +95,22 @@ export class QuestionBankService {
         const question = questions[0];
         return {
             ...question,
-            options: question.options ? JSON.parse(question.options) : null
+            options: safeParseOptions(question.options)
         };
     }
 
     // Create new question
     async createQuestion(questionData: Question): Promise<any> {
-        const optionsJson = questionData.options ? JSON.stringify(questionData.options) : null;
+        // options may come in as a JSON string (from bulkSaveQuestions) OR as an array (from manual form).
+        // Never double-stringify — check what type it is first.
+        let optionsJson: string | null = null;
+        if (questionData.options) {
+            if (typeof questionData.options === 'string') {
+                optionsJson = questionData.options; // already a JSON string
+            } else if (Array.isArray(questionData.options)) {
+                optionsJson = JSON.stringify(questionData.options); // convert array to JSON string
+            }
+        }
 
         const [result] = await pool.query<ResultSetHeader>(
             `INSERT INTO question_bank 

@@ -347,6 +347,33 @@ export class ParentController {
         }
     }
 
+    async submitPTMFeedback(req: AuthRequest, res: Response) {
+        try {
+            const bookingId = parseInt(req.params.id);
+            const { feedback, rating } = req.body;
+
+            if (!feedback || feedback.trim() === '') {
+                return res.status(400).json({ error: 'Feedback text is required' });
+            }
+
+            // Verify booking belongs to parent
+            const booking = await ptmBookingService.getPTMBookingById(bookingId);
+            if (!booking || booking.parent_id !== req.user!.id) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            const result = await ptmBookingService.submitFeedback(
+                bookingId,
+                'parent',
+                feedback.trim(),
+                rating ? parseInt(rating) : undefined
+            );
+            res.json(result);
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
     // Get booked slots for a teacher
     async getBookedSlots(req: AuthRequest, res: Response) {
         try {

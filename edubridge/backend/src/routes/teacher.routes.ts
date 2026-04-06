@@ -3,7 +3,7 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { teacherController } from '../controllers/TeacherController';
 import { LeaveController } from '../controllers/LeaveController';
 import { timetableController } from '../controllers/TimetableController';
-import { uploadAssignment } from '../middleware/upload';
+import { uploadAssignment, uploadAiFile } from '../middleware/upload';
 
 const router = Router();
 
@@ -98,5 +98,9 @@ router.put('/leave/relief-requests', (req, res) => LeaveController.respondToReli
 
 // Dropdowns (Reusable from Timetable)
 router.get('/timetable/teachers-dropdown', (req, res) => timetableController.getTeachersForDropdown(req, res));
+
+// AI Question Extraction
+router.post('/ai/extract-questions', uploadAiFile, (req, res) => teacherController.extractQuestionsFromFile(req, res));
+router.post('/ai/bulk-save-questions', (req, res) => teacherController.bulkSaveQuestions(req, res));
 
 export default router;

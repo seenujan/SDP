@@ -460,8 +460,10 @@ const UserManagement = () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                             >
                                 <option value="">Select Grade</option>
-                                {/* Get unique grades from classes */}
-                                {[...new Set(classes.map(c => c.grade))].map((grade) => (
+                                {/* Get unique grades from classes, sorted numerically */}
+                                {[...new Set(classes.map(c => c.grade))]
+                                    .sort((a, b) => parseInt(a.replace('Grade ', '')) - parseInt(b.replace('Grade ', '')))
+                                    .map((grade) => (
                                     <option key={grade} value={grade}>{grade}</option>
                                 ))}
                             </select>

@@ -7,6 +7,7 @@ export interface User {
     grade?: string;
     section?: string;
     phone?: string;
+    profile_photo?: string;
 }
 
 export interface LoginResponse {

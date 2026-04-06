@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { BookOpen, Plus, Calendar, Clock, Award, ArrowRight, ArrowLeft, Check, X, Edit, Eye } from 'lucide-react';
+import { BookOpen, Plus, Calendar, Clock, Award, ArrowRight, ArrowLeft, Check, X, Edit, Eye, Sparkles, FileUp, CheckSquare, Square, Loader2 } from 'lucide-react';
 
 interface Exam {
     id: number;
@@ -62,6 +62,17 @@ const Exams = () => {
         difficulty_level: '',
         question_type: '',
     });
+
+    // Step 2 tab: 'bank' | 'ai'
+    const [step2Tab, setStep2Tab] = useState<'bank' | 'ai'>('bank');
+
+    // AI Extraction state
+    const [aiFile, setAiFile] = useState<File | null>(null);
+    const [aiInstructions, setAiInstructions] = useState('Generate 5 multiple choice questions, medium difficulty');
+    const [aiStep, setAiStep] = useState<'upload' | 'loading' | 'review'>('upload');
+    const [aiExtractedQuestions, setAiExtractedQuestions] = useState<any[]>([]);
+    const [aiSaving, setAiSaving] = useState(false);
+    const [aiError, setAiError] = useState('');
 
     useEffect(() => {
         fetchExams();
@@ -243,6 +254,80 @@ const Exams = () => {
             difficulty_level: '',
             question_type: '',
         });
+        setStep2Tab('bank');
+        setAiStep('upload');
+        setAiFile(null);
+        setAiExtractedQuestions([]);
+        setAiError('');
+    };
+
+    // ── AI Extraction Handlers ─────────────────────────────────────────
+    const handleAiExtract = async () => {
+        if (!aiFile) { setAiError('Please select a file.'); return; }
+        if (!aiInstructions.trim()) { setAiError('Please enter instructions.'); return; }
+        setAiStep('loading');
+        setAiError('');
+        try {
+            const fd = new FormData();
+            fd.append('file', aiFile);
+            fd.append('subject_id', formData.subject_id || '0');
+            fd.append('instructions', aiInstructions);
+            const response = await teacherAPI.extractQuestionsFromFile(fd);
+            const qs = (response.data.questions || []).map((q: any) => ({ ...q, selected: true }));
+            if (qs.length === 0) { setAiError('No questions extracted. Try a different file or instructions.'); setAiStep('upload'); return; }
+            setAiExtractedQuestions(qs);
+            setAiStep('review');
+        } catch (err: any) {
+            setAiError(err.response?.data?.error || 'AI extraction failed.');
+            setAiStep('upload');
+        }
+    };
+
+    const handleAddAiQuestionsToExam = async () => {
+        const selected = aiExtractedQuestions.filter(q => q.selected);
+        if (selected.length === 0) { alert('Select at least one question.'); return; }
+        setAiSaving(true);
+        try {
+            // Save to question bank and get their IDs
+            const saveRes = await teacherAPI.bulkSaveQuestions(selected, parseInt(formData.subject_id) || 0);
+            const savedIds: number[] = saveRes.data.ids || [];
+
+            // Add to exam selected questions using a temp question object
+            const newSelected = selected.map((q: any, i: number) => ({
+                question_id: savedIds[i] || -(Date.now() + i), // use saved ID
+                marks: q.marks || 1,
+                question: {
+                    id: savedIds[i] || 0,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    subject: subjects.find(s => s.id.toString() === formData.subject_id)?.subject_name || '',
+                    topic: q.topic,
+                    difficulty_level: q.difficulty_level,
+                    marks: q.marks,
+                    options: q.options,
+                    correct_answer: q.correct_answer,
+                }
+            }));
+
+            // Merge into selectedQuestions (avoid duplicates)
+            setSelectedQuestions(prev => {
+                const existingIds = new Set(prev.map(p => p.question_id));
+                const toAdd = newSelected.filter(q => !existingIds.has(q.question_id));
+                return [...prev, ...toAdd];
+            });
+
+            alert(`✅ ${selected.length} question(s) saved to Question Bank and added to exam!`);
+            setStep2Tab('bank');
+            setAiStep('upload');
+            setAiFile(null);
+            setAiExtractedQuestions([]);
+            // Refresh question bank list
+            fetchQuestions();
+        } catch (err: any) {
+            alert(err.response?.data?.error || 'Failed to save questions.');
+        } finally {
+            setAiSaving(false);
+        }
     };
 
     const handleEdit = async (exam: Exam) => {
@@ -558,6 +643,35 @@ const Exams = () => {
                                 {/* Step 2: Select Questions */}
                                 {step === 2 && (
                                     <div className="space-y-6">
+                                        {/* Tab Bar */}
+                                        <div className="flex border-b border-gray-200">
+                                            <button
+                                                onClick={() => setStep2Tab('bank')}
+                                                className={`flex items-center space-x-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                                                    step2Tab === 'bank'
+                                                        ? 'border-primary-600 text-primary-600'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                <BookOpen size={16} />
+                                                <span>From Question Bank</span>
+                                            </button>
+                                            <button
+                                                onClick={() => { setStep2Tab('ai'); setAiStep('upload'); setAiError(''); }}
+                                                className={`flex items-center space-x-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                                                    step2Tab === 'ai'
+                                                        ? 'border-purple-600 text-purple-600'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                <Sparkles size={16} />
+                                                <span>Extract from File (AI)</span>
+                                            </button>
+                                        </div>
+
+                                        {/* ── TAB: QUESTION BANK ── */}
+                                        {step2Tab === 'bank' && (
+                                        <div className="space-y-4">
                                         {/* Question Filters */}
                                         <div className="bg-gray-50 p-4 rounded-lg">
                                             <h3 className="font-medium text-gray-800 mb-3">Filter Questions</h3>
@@ -697,6 +811,114 @@ const Exams = () => {
                                                 )}
                                             </div>
                                         </div>
+                                        </div>
+                                        )}
+
+                                        {/* ── TAB: AI EXTRACT ── */}
+                                        {step2Tab === 'ai' && (
+                                        <div className="space-y-5">
+                                            {aiError && (
+                                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{aiError}</div>
+                                            )}
+
+                                            {/* UPLOAD STATE */}
+                                            {aiStep === 'upload' && (
+                                            <div className="space-y-4">
+                                                <div
+                                                    className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 hover:bg-purple-50 transition-colors cursor-pointer"
+                                                    onClick={() => document.getElementById('exam-ai-file-input')?.click()}
+                                                >
+                                                    <FileUp size={28} className="mx-auto text-gray-400 mb-2" />
+                                                    {aiFile ? (
+                                                        <div>
+                                                            <p className="font-medium text-gray-800">{aiFile.name}</p>
+                                                            <p className="text-sm text-gray-500">{(aiFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <p className="text-gray-600 font-medium">Click to upload lesson file</p>
+                                                            <p className="text-sm text-gray-400 mt-1">PDF, PPT, PPTX, TXT — max 15MB</p>
+                                                        </div>
+                                                    )}
+                                                    <input id="exam-ai-file-input" type="file" accept=".pdf,.ppt,.pptx,.txt" className="hidden" onChange={(e) => setAiFile(e.target.files?.[0] || null)} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Instructions for AI</label>
+                                                    <textarea rows={2} value={aiInstructions} onChange={(e) => setAiInstructions(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm" placeholder="e.g., Generate 10 MCQ questions, medium difficulty, Chapter 2" />
+                                                </div>
+                                                <button onClick={handleAiExtract} disabled={!aiFile} className="w-full py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium">
+                                                    <Sparkles size={18} />
+                                                    <span>Extract Questions with AI</span>
+                                                </button>
+                                            </div>
+                                            )}
+
+                                            {/* LOADING STATE */}
+                                            {aiStep === 'loading' && (
+                                            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                                                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                                                    <Loader2 size={30} className="text-purple-600 animate-spin" />
+                                                </div>
+                                                <p className="text-lg font-semibold text-gray-800">AI is reading your file...</p>
+                                                <p className="text-gray-500 text-sm">This may take 15–30 seconds.</p>
+                                            </div>
+                                            )}
+
+                                            {/* REVIEW STATE */}
+                                            {aiStep === 'review' && (
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-sm text-gray-600">{aiExtractedQuestions.filter(q => q.selected).length} of {aiExtractedQuestions.length} selected</p>
+                                                    <button onClick={() => setAiExtractedQuestions(prev => prev.map(q => ({ ...q, selected: !prev.every(q => q.selected) })))} className="text-sm text-purple-600 font-medium">
+                                                        {aiExtractedQuestions.every(q => q.selected) ? 'Deselect All' : 'Select All'}
+                                                    </button>
+                                                </div>
+                                                <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
+                                                    {aiExtractedQuestions.map((q, idx) => (
+                                                        <div key={idx} className={`border-2 rounded-xl p-4 transition-all cursor-pointer ${q.selected ? 'border-purple-400 bg-purple-50' : 'border-gray-200'}`} onClick={() => setAiExtractedQuestions(prev => prev.map((x, i) => i === idx ? { ...x, selected: !x.selected } : x))}>
+                                                            <div className="flex items-start space-x-3">
+                                                                <div className="mt-0.5 flex-shrink-0">
+                                                                    {q.selected ? <CheckSquare size={20} className="text-purple-600" /> : <Square size={20} className="text-gray-400" />}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex flex-wrap gap-2 mb-2">
+                                                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                                            q.difficulty_level === 'easy' ? 'bg-green-100 text-green-800' :
+                                                                            q.difficulty_level === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                                                        }`}>{q.difficulty_level?.toUpperCase()}</span>
+                                                                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800">{q.question_type?.replace('_',' ').toUpperCase()}</span>
+                                                                        <span className="text-xs text-primary-600 font-medium">{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
+                                                                    </div>
+                                                                    <p className="text-sm font-medium text-gray-800">{q.question_text}</p>
+                                                                    {q.question_type === 'multiple_choice' && q.options?.length > 0 && (
+                                                                        <div className="mt-2 space-y-0.5">
+                                                                            {q.options.map((opt: string, oi: number) => (
+                                                                                <p key={oi} className={`text-xs ${opt === q.correct_answer ? 'text-green-700 font-semibold' : 'text-gray-600'}`}>
+                                                                                    {String.fromCharCode(65+oi)}. {opt} {opt === q.correct_answer ? '✓' : ''}
+                                                                                </p>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2 border-t">
+                                                    <button onClick={() => { setAiStep('upload'); setAiFile(null); }} className="text-sm text-gray-500 hover:text-gray-700">← Change file</button>
+                                                    <button
+                                                        onClick={handleAddAiQuestionsToExam}
+                                                        disabled={aiSaving || aiExtractedQuestions.filter(q => q.selected).length === 0}
+                                                        className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 flex items-center space-x-2 text-sm font-medium"
+                                                    >
+                                                        {aiSaving ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
+                                                        <span>{aiSaving ? 'Saving...' : `Add ${aiExtractedQuestions.filter(q => q.selected).length} to Exam`}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            )}
+                                        </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

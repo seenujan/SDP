@@ -15,7 +15,11 @@ export interface PTMMeeting {
     rejection_reason?: string;
     alternative_date?: string;
     alternative_time?: string;
-    teacher_remarks?: string;
+    teacher_remarks?: string; // kept for backward compat (legacy column)
+    teacher_feedback?: string; // from ptm_feedback table
+    parent_feedback?: string;  // from ptm_feedback table
+    teacher_feedback_rating?: number;
+    parent_feedback_rating?: number;
     created_at?: string;
     parent_name?: string;
     student_name?: string;
@@ -35,13 +39,19 @@ export class PTMBookingService {
                 c.section,
                 s.roll_number,
                 u.email as parent_email,
-                pr.phone as parent_phone
+                pr.phone as parent_phone,
+                tf.feedback as teacher_feedback,
+                tf.rating as teacher_feedback_rating,
+                pf.feedback as parent_feedback,
+                pf.rating as parent_feedback_rating
             FROM ptm_meetings ptm
             LEFT JOIN users p ON ptm.parent_id = p.id
             LEFT JOIN parents pr ON ptm.parent_id = pr.user_id
             JOIN students s ON ptm.student_id = s.id
             JOIN classes c ON s.class_id = c.id
             LEFT JOIN users u ON ptm.parent_id = u.id
+            LEFT JOIN ptm_feedback tf ON ptm.id = tf.ptm_meeting_id AND tf.feedback_from = 'teacher'
+            LEFT JOIN ptm_feedback pf ON ptm.id = pf.ptm_meeting_id AND pf.feedback_from = 'parent'
             WHERE ptm.teacher_id = ?
         `;
         const params: any[] = [teacherId];
@@ -53,11 +63,7 @@ export class PTMBookingService {
 
         query += ' ORDER BY ptm.created_at DESC';
 
-        console.log('PTM Teacher Query:', query);
-        console.log('Params:', params);
-
         const [bookings] = await pool.query<RowDataPacket[]>(query, params);
-        console.log(`Found ${bookings.length} PTMs for teacher ${teacherId}`);
         return bookings as PTMMeeting[];
     }
 
@@ -68,16 +74,21 @@ export class PTMBookingService {
                 t.full_name as teacher_name,
                 s.full_name as student_name,
                 c.grade,
-                c.section
+                c.section,
+                tf.feedback as teacher_feedback,
+                tf.rating as teacher_feedback_rating,
+                pf.feedback as parent_feedback,
+                pf.rating as parent_feedback_rating
             FROM ptm_meetings ptm
             JOIN teachers t ON ptm.teacher_id = t.user_id
             JOIN students s ON ptm.student_id = s.id
             JOIN classes c ON s.class_id = c.id
+            LEFT JOIN ptm_feedback tf ON ptm.id = tf.ptm_meeting_id AND tf.feedback_from = 'teacher'
+            LEFT JOIN ptm_feedback pf ON ptm.id = pf.ptm_meeting_id AND pf.feedback_from = 'parent'
             WHERE ptm.parent_id = ?
             ORDER BY ptm.created_at DESC
         `;
         const [bookings] = await pool.query<RowDataPacket[]>(query, [parentId]);
-        console.log(`Found ${bookings.length} PTMs for parent ${parentId}`);
         return bookings as PTMMeeting[];
     }
 
@@ -248,11 +259,20 @@ export class PTMBookingService {
 
         const booking = await this.getPTMBookingById(bookingId);
 
-        // Notify Parent (assuming teacher reschedules)
+        // Notify the OTHER party — whoever proposed the reschedule notifies the other side
+        // If parent initiated → teacher rejected & proposed alt → notify parent
+        // If teacher initiated → parent rejected & proposed alt → notify teacher
+        const rescheduleRecipientId = booking.initiator === 'parent'
+            ? booking.parent_id
+            : booking.teacher_id;
+        const rescheduleMsg = booking.initiator === 'parent'
+            ? `Your PTM request with ${booking.teacher_name} was declined. Alternative proposed: ${alternativeDate} at ${alternativeTime}. Reason: ${reason}`
+            : `The parent has declined your PTM invitation for ${booking.student_name} and proposed an alternative: ${alternativeDate} at ${alternativeTime}. Reason: ${reason}`;
+
         await notificationService.createNotification(
-            booking.parent_id,
-            'PTM Reschedule Requested',
-            `Your PTM request with ${booking.teacher_name} was declined. Alternative proposed: ${alternativeDate} at ${alternativeTime}. Reason: ${reason}`,
+            rescheduleRecipientId,
+            'PTM Reschedule Proposed',
+            rescheduleMsg,
             'ptm'
         );
 
@@ -279,11 +299,20 @@ export class PTMBookingService {
             [booking.alternative_date, booking.alternative_time, bookingId]
         );
 
-        // Notify Teacher
+        // Notify whoever PROPOSED the alternative (the accepting party's notification goes to the proposer)
+        // Parent initiated → teacher proposed alt → parent accepted → notify teacher
+        // Teacher initiated → parent proposed alt → teacher accepted → notify parent
+        const acceptRecipientId = booking.initiator === 'parent'
+            ? booking.teacher_id
+            : booking.parent_id;
+        const acceptMsg = booking.initiator === 'parent'
+            ? `${booking.parent_name} has accepted your proposed alternative slot for ${booking.student_name} on ${booking.alternative_date} at ${booking.alternative_time}.`
+            : `The teacher has accepted your proposed alternative slot for ${booking.student_name} on ${booking.alternative_date} at ${booking.alternative_time}.`;
+
         await notificationService.createNotification(
-            booking.teacher_id,
+            acceptRecipientId,
             'Alternative Slot Accepted',
-            `${booking.parent_name} has accepted the alternative slot for ${booking.student_name} on ${booking.alternative_date} at ${booking.alternative_time}.`,
+            acceptMsg,
             'ptm'
         );
 
@@ -314,23 +343,45 @@ export class PTMBookingService {
         return booking;
     }
 
-    // Mark PTM as completed
+    // Mark PTM as completed and save teacher feedback to ptm_feedback table
     async completePTM(bookingId: number, teacherRemarks?: string): Promise<PTMMeeting> {
+        // Update status only (teacher_remarks column kept for legacy, but feedback goes to ptm_feedback)
         await pool.query(
-            'UPDATE ptm_meetings SET status = ?, teacher_remarks = ? WHERE id = ?',
-            ['completed', teacherRemarks || null, bookingId]
+            'UPDATE ptm_meetings SET status = ? WHERE id = ?',
+            ['completed', bookingId]
         );
 
         const booking = await this.getPTMBookingById(bookingId);
 
+        // Save teacher remarks as feedback in ptm_feedback table
+        if (teacherRemarks && teacherRemarks.trim()) {
+            const [existing] = await pool.query<RowDataPacket[]>(
+                'SELECT id FROM ptm_feedback WHERE ptm_meeting_id = ? AND feedback_from = ?',
+                [bookingId, 'teacher']
+            );
+            if (existing.length > 0) {
+                await pool.query(
+                    'UPDATE ptm_feedback SET feedback = ?, created_at = CURRENT_TIMESTAMP WHERE ptm_meeting_id = ? AND feedback_from = ?',
+                    [teacherRemarks.trim(), bookingId, 'teacher']
+                );
+            } else {
+                await pool.query<ResultSetHeader>(
+                    'INSERT INTO ptm_feedback (ptm_meeting_id, feedback_from, feedback) VALUES (?, ?, ?)',
+                    [bookingId, 'teacher', teacherRemarks.trim()]
+                );
+            }
+        }
+
         await notificationService.createNotification(
             booking.parent_id,
             'PTM Completed',
-            `The PTM with ${booking.teacher_name} has been marked as completed. Remarks: ${teacherRemarks || 'None'}`,
+            `The PTM with ${booking.teacher_name} has been marked as completed.${
+                teacherRemarks ? ` Teacher\'s feedback: ${teacherRemarks}` : ''
+            }`,
             'ptm'
         );
 
-        return booking;
+        return this.getPTMBookingById(bookingId);
     }
 
     // Get upcoming PTMs for teacher
@@ -368,6 +419,52 @@ export class PTMBookingService {
             [teacherId]
         );
         return stats[0];
+    }
+
+    // Submit feedback for a completed PTM meeting
+    async submitFeedback(bookingId: number, feedbackFrom: 'parent' | 'teacher', feedback: string, rating?: number): Promise<any> {
+        const booking = await this.getPTMBookingById(bookingId);
+        if (!booking) throw new Error('Meeting not found');
+        if (booking.status !== 'completed') throw new Error('Feedback can only be submitted for completed meetings');
+
+        // Upsert: update if already submitted, otherwise insert
+        const [existing] = await pool.query<RowDataPacket[]>(
+            'SELECT id FROM ptm_feedback WHERE ptm_meeting_id = ? AND feedback_from = ?',
+            [bookingId, feedbackFrom]
+        );
+
+        if (existing.length > 0) {
+            await pool.query(
+                'UPDATE ptm_feedback SET feedback = ?, rating = ?, created_at = CURRENT_TIMESTAMP WHERE ptm_meeting_id = ? AND feedback_from = ?',
+                [feedback, rating || null, bookingId, feedbackFrom]
+            );
+        } else {
+            await pool.query<ResultSetHeader>(
+                'INSERT INTO ptm_feedback (ptm_meeting_id, feedback_from, feedback, rating) VALUES (?, ?, ?, ?)',
+                [bookingId, feedbackFrom, feedback, rating || null]
+            );
+        }
+
+        // Notify the other party
+        const notifyId = feedbackFrom === 'parent' ? booking.teacher_id : booking.parent_id;
+        const notifyName = feedbackFrom === 'parent' ? booking.parent_name : booking.teacher_name;
+        await notificationService.createNotification(
+            notifyId,
+            'PTM Feedback Submitted',
+            `${notifyName} has submitted feedback for the PTM meeting regarding ${booking.student_name}.`,
+            'ptm'
+        );
+
+        return { success: true, message: 'Feedback submitted successfully' };
+    }
+
+    // Get feedback for a specific PTM meeting
+    async getFeedback(bookingId: number): Promise<any[]> {
+        const [rows] = await pool.query<RowDataPacket[]>(
+            'SELECT * FROM ptm_feedback WHERE ptm_meeting_id = ? ORDER BY created_at ASC',
+            [bookingId]
+        );
+        return rows;
     }
 
     // Delete PTM booking (optional, mostly for cleanup)

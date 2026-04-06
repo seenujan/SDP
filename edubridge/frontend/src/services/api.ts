@@ -179,6 +179,12 @@ export const teacherAPI = {
     createEvent: (data: any) => api.post('/teacher/events', data),
     updateEvent: (id: number, data: any) => api.put(`/teacher/events/${id}`, data),
     deleteEvent: (id: number) => api.delete(`/teacher/events/${id}`),
+
+    // AI Question Extraction
+    extractQuestionsFromFile: (formData: FormData) =>
+        api.post('/teacher/ai/extract-questions', formData),
+    bulkSaveQuestions: (questions: any[], subject_id: number) =>
+        api.post('/teacher/ai/bulk-save-questions', { questions, subject_id }),
 };
 
 // Student API
@@ -232,6 +238,8 @@ export const parentAPI = {
     requestPTM: (data: any) => api.post('/parent/ptm/request', data),
     respondToAlternative: (id: number, status: string) => api.put(`/parent/ptm/${id}/respond`, { status }),
     updatePTMStatus: (id: number, data: any) => api.put(`/parent/ptm/${id}/status`, data),
+    submitPTMFeedback: (id: number, feedback: string, rating?: number) =>
+        api.post(`/parent/ptm/${id}/feedback`, { feedback, rating }),
     getBookedSlots: (teacherId: number, date: string) =>
         api.get(`/parent/teachers/${teacherId}/booked-slots`, { params: { date } }),
     getChildTeachers: (childId: number) => api.get(`/parent/child/${childId}/teachers`),
@@ -243,6 +251,8 @@ export const profileAPI = {
     updateProfile: (data: any) => api.put('/profile', data),
     changePassword: (currentPassword: string, newPassword: string) =>
         api.post('/profile/change-password', { currentPassword, newPassword }),
+    uploadProfilePhoto: (formData: FormData) =>
+        api.post('/profile/upload-photo', formData),
 };
 
 // Notification API

@@ -12,13 +12,17 @@ interface PTMRequest {
     roll_number: string;
     parent_email: string;
     parent_phone: string;
-    meeting_date: string; // Changed from preferred_date
-    meeting_time: string; // Changed from preferred_time
+    meeting_date: string;
+    meeting_time: string;
     notes?: string;
     status: 'pending' | 'approved' | 'rejected' | 'completed' | 'reschedule_requested';
     approved_date?: string;
     approved_time?: string;
-    teacher_remarks?: string;
+    teacher_remarks?: string;   // legacy column
+    teacher_feedback?: string;  // from ptm_feedback table
+    parent_feedback?: string;   // from ptm_feedback table
+    teacher_feedback_rating?: number;
+    parent_feedback_rating?: number;
     rejection_reason?: string;
     alternative_date?: string;
     alternative_time?: string;
@@ -43,6 +47,11 @@ const PTMBooking = () => {
         alternative_date: '',
         alternative_time: ''
     });
+
+    // Complete Modal State
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [completeRequest, setCompleteRequest] = useState<PTMRequest | null>(null);
+    const [completeRemarks, setCompleteRemarks] = useState('');
 
     // Initiate Modal State
     const [showInitiateModal, setShowInitiateModal] = useState(false);
@@ -130,6 +139,46 @@ const PTMBooking = () => {
         }
     };
 
+    const handleCompleteSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!completeRequest) return;
+        try {
+            await teacherAPI.updatePTMStatus(completeRequest.id, {
+                status: 'completed',
+                teacher_remarks: completeRemarks
+            });
+            setShowCompleteModal(false);
+            setCompleteRequest(null);
+            setCompleteRemarks('');
+            fetchRequests();
+        } catch (error) {
+            console.error('Failed to complete PTM:', error);
+        }
+    };
+
+    const handleAcceptAlternative = async (requestId: number) => {
+        try {
+            await teacherAPI.updatePTMStatus(requestId, { status: 'accept_alternative' });
+            fetchRequests();
+        } catch (error) {
+            console.error('Failed to accept alternative:', error);
+        }
+    };
+
+    const handleDeclineAlternative = async (requestId: number) => {
+        const reason = window.prompt('Reason for declining the proposed alternative:');
+        if (reason === null) return; // cancelled
+        try {
+            await teacherAPI.updatePTMStatus(requestId, {
+                status: 'rejected',
+                rejection_reason: reason || 'Declined alternative'
+            });
+            fetchRequests();
+        } catch (error) {
+            console.error('Failed to decline alternative:', error);
+        }
+    };
+
     const handleInitiateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // Find parentId from student list
@@ -169,6 +218,18 @@ const PTMBooking = () => {
             reschedule_requested: 'bg-purple-100 text-purple-800'
         };
         return badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800';
+    };
+
+    // Returns true only if the meeting date+time is in the past (uses local timezone)
+    const isMeetingPast = (meetingDate: string, meetingTime: string): boolean => {
+        if (!meetingDate || !meetingTime) return false;
+        // Convert DB date to local year/month/day (avoids UTC-vs-local off-by-one-day bug)
+        const d = new Date(meetingDate);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const meetingDateTime = new Date(`${yyyy}-${mm}-${dd}T${meetingTime}:00`);
+        return new Date() >= meetingDateTime;
     };
 
     if (loading) {
@@ -262,6 +323,33 @@ const PTMBooking = () => {
                                 </div>
                             )}
 
+                            {/* Teacher's own feedback (from ptm_feedback table) */}
+                            {request.teacher_feedback && (
+                                <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Your Feedback</p>
+                                    {request.teacher_feedback_rating && (
+                                        <p className="text-yellow-500 text-sm mb-1">
+                                            {'★'.repeat(request.teacher_feedback_rating)}{'☆'.repeat(5 - request.teacher_feedback_rating)}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-blue-800">{request.teacher_feedback}</p>
+                                </div>
+                            )}
+
+                            {/* Parent's feedback (from ptm_feedback table) */}
+                            {request.parent_feedback && (
+                                <div className="mb-3 p-3 bg-green-50 rounded-lg">
+                                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Parent's Feedback</p>
+                                    {request.parent_feedback_rating && (
+                                        <p className="text-yellow-500 text-sm mb-1">
+                                            {'★'.repeat(request.parent_feedback_rating)}{'☆'.repeat(5 - request.parent_feedback_rating)}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-green-800">{request.parent_feedback}</p>
+                                </div>
+                            )}
+
+                            {/* Pending (parent-initiated): Approve / Reject */}
                             {request.status === 'pending' && request.initiator === 'parent' && (
                                 <div className="flex space-x-3 mt-4">
                                     <button
@@ -278,6 +366,68 @@ const PTMBooking = () => {
                                         <XCircle size={18} />
                                         <span>Reject</span>
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Approved: Mark as Completed — only active after meeting time */}
+                            {request.status === 'approved' && (() => {
+                                const canComplete = isMeetingPast(request.meeting_date, request.meeting_time);
+                                return (
+                                    <div className="mt-4">
+                                        <button
+                                            onClick={() => {
+                                                if (!canComplete) return;
+                                                setCompleteRequest(request);
+                                                setCompleteRemarks('');
+                                                setShowCompleteModal(true);
+                                            }}
+                                            disabled={!canComplete}
+                                            title={canComplete ? 'Mark this meeting as completed' : 'Available after the meeting time has passed'}
+                                            className={`w-full px-4 py-2 rounded-lg flex items-center justify-center space-x-2 transition-all ${
+                                                canComplete
+                                                    ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            }`}
+                                        >
+                                            <CheckCircle size={18} />
+                                            <span>Mark as Completed</span>
+                                        </button>
+                                        {!canComplete && (
+                                            <p className="text-xs text-gray-400 text-center mt-1">Available after the meeting time</p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Reschedule requested (teacher-initiated): parent proposed alt — teacher can Accept or Decline */}
+                            {request.status === 'reschedule_requested' && request.initiator === 'teacher' && (
+                                <div className="mt-4 bg-purple-50 p-3 rounded-lg">
+                                    <div className="flex items-start space-x-2 text-purple-800 mb-2">
+                                        <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-medium text-sm">Parent proposed an alternative</p>
+                                            <p className="text-xs mt-1 font-semibold">
+                                                New Slot: {request.alternative_date ? new Date(request.alternative_date).toLocaleDateString() : '—'} at {request.alternative_time}
+                                            </p>
+                                            {request.rejection_reason && (
+                                                <p className="text-xs mt-1">Reason: {request.rejection_reason}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex space-x-2 mt-2">
+                                        <button
+                                            onClick={() => handleAcceptAlternative(request.id)}
+                                            className="flex-1 bg-green-600 text-white px-3 py-1.5 rounded text-xs hover:bg-green-700"
+                                        >
+                                            Accept Alternative
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeclineAlternative(request.id)}
+                                            className="flex-1 bg-red-600 text-white px-3 py-1.5 rounded text-xs hover:bg-red-700"
+                                        >
+                                            Decline
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -377,7 +527,46 @@ const PTMBooking = () => {
                 )}
 
 
-                {/* Action Modal */}
+                {/* Complete Modal */}
+            {showCompleteModal && completeRequest && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Mark as Completed</h2>
+                        <p className="text-sm text-gray-500 mb-6">
+                            Meeting with {completeRequest.parent_name} for {completeRequest.student_name}
+                        </p>
+                        <form onSubmit={handleCompleteSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Teacher Feedback (Optional)</label>
+                                <textarea
+                                    rows={4}
+                                    className="w-full px-4 py-2 border rounded-lg"
+                                    value={completeRemarks}
+                                    onChange={(e) => setCompleteRemarks(e.target.value)}
+                                    placeholder="Add any remarks about the meeting outcome..."
+                                />
+                            </div>
+                            <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowCompleteModal(false); setCompleteRequest(null); }}
+                                    className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    Confirm Completed
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Modal (Approve / Reject) */}
                 {showActionModal && selectedRequest && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">

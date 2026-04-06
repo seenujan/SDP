@@ -155,7 +155,7 @@ export class UserService {
     async getUserById(id: number) {
         const [rows]: any = await pool.query(
             `SELECT 
-                u.id, u.email, u.role, u.active, u.created_at,
+                u.id, u.email, u.role, u.active, u.created_at, u.profile_photo,
                 COALESCE(t.full_name, s.full_name, p.full_name) as full_name,
                 sub.subject_name as subject, t.subject_id, t.id as teacher_id,
                 c.grade, c.section, s.date_of_birth, s.parent_id, s.class_id, s.id as student_id,
@@ -352,7 +352,7 @@ export class UserService {
     // Get available grades (distinct)
     async getAvailableGrades() {
         const [rows] = await pool.query(`
-            SELECT DISTINCT grade FROM classes ORDER BY grade
+            SELECT DISTINCT grade FROM classes ORDER BY CAST(SUBSTRING(grade, 7) AS UNSIGNED)
         `);
         return rows;
     }

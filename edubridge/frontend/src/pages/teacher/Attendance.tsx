@@ -217,8 +217,8 @@ const Attendance = () => {
                                 disabled={loading || classes.length === 0}
                             >
                                 <option value="">Choose a class...</option>
-                                {classes.map(cls => (
-                                    <option key={cls.timetable_id} value={cls.timetable_id}>
+                                {classes.map((cls, idx) => (
+                                    <option key={cls.timetable_id ?? `cls-${idx}`} value={cls.timetable_id}>
                                         {cls.class_name} - {cls.subject} ({cls.student_count} students)
                                     </option>
                                 ))}

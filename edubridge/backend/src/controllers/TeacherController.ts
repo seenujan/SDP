@@ -12,6 +12,8 @@ import { ptmBookingService } from '../services/PTMBookingService';
 import { announcementService, eventService } from '../services/AnnouncementService';
 import { subjectService } from '../services/SubjectService';
 import { pool } from '../config/database';
+import { aiService } from '../services/AiService';
+import * as fs from 'fs';
 
 export class TeacherController {
     // GET /api/teacher/dashboard
@@ -144,30 +146,30 @@ export class TeacherController {
             console.log('Teacher ID:', teacherId);
             console.log('Day filter:', day);
 
-            let query = `
-                SELECT DISTINCT 
-                    c.id,
-                    c.grade,
-                    c.section,
-                    CONCAT(c.grade, ' ', c.section) as class_name,
-                    ts.subject_name as subject,
-                    ts.id as subject_id
-                FROM timetable t
-                JOIN classes c ON t.class_id = c.id
-                JOIN subjects ts ON t.subject_id = ts.id
-                WHERE t.teacher_id = ?
-            `;
-
+            let whereClause = 'WHERE t.teacher_id = ?';
             const params: any[] = [teacherId];
 
             // Filter by day of week if provided
             if (day && typeof day === 'string') {
-                query += ' AND t.day_of_week = ?';
+                whereClause += ' AND t.day_of_week = ?';
                 params.push(day);
             }
 
-            query += `
-                ORDER BY c.grade, c.section, ts.subject_name
+            const query = `
+                SELECT 
+                    MIN(t.id) as timetable_id,
+                    c.id,
+                    c.grade,
+                    c.section,
+                    CONCAT(c.grade, ' ', c.section) as class_name,
+                    MIN(ts.subject_name) as subject,
+                    MIN(ts.id) as subject_id
+                FROM timetable t
+                JOIN classes c ON t.class_id = c.id
+                JOIN subjects ts ON t.subject_id = ts.id
+                ${whereClause}
+                GROUP BY c.id, c.grade, c.section
+                ORDER BY c.grade, c.section
             `;
 
             console.log('Query:', query.replace(/\s+/g, ' ').trim());
@@ -523,15 +525,18 @@ export class TeacherController {
 
     async updatePTMStatus(req: AuthRequest, res: Response) {
         try {
-            const { status, rejection_reason, alternative_date, alternative_time } = req.body;
+            const { status, rejection_reason, alternative_date, alternative_time, teacher_remarks } = req.body;
             const bookingId = parseInt(req.params.id);
 
             let booking;
             if (status === 'approved') {
                 booking = await ptmBookingService.approvePTM(bookingId);
+            } else if (status === 'accept_alternative') {
+                // Teacher accepts a parent-proposed alternative slot (teacher-initiated meeting)
+                booking = await ptmBookingService.acceptAlternative(bookingId);
             } else if (status === 'rejected') {
                 if (alternative_date && alternative_time) {
-                    // Reject with alternative
+                    // Reject with alternative slot proposal
                     booking = await ptmBookingService.rejectWithAlternative(
                         bookingId,
                         rejection_reason || 'Reschedule requested',
@@ -543,7 +548,7 @@ export class TeacherController {
                     booking = await ptmBookingService.rejectPTM(bookingId, rejection_reason || 'Rejected');
                 }
             } else if (status === 'completed') {
-                booking = await ptmBookingService.completePTM(bookingId);
+                booking = await ptmBookingService.completePTM(bookingId, teacher_remarks);
             } else {
                 return res.status(400).json({ error: 'Invalid status' });
             }
@@ -660,6 +665,74 @@ export class TeacherController {
             res.json({ success: true });
         } catch (error: any) {
             res.status(500).json({ error: error.message });
+        }
+    }
+    // AI Question Extraction
+    async extractQuestionsFromFile(req: AuthRequest, res: Response) {
+        const filePath = (req as any).file?.path;
+        const originalName = (req as any).file?.originalname || '';
+        try {
+            if (!filePath) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+            const { instructions } = req.body;
+            if (!instructions) {
+                return res.status(400).json({ error: 'Instructions are required' });
+            }
+
+            // Extract text from the uploaded file
+            const text = await aiService.extractTextFromFile(filePath, originalName);
+            if (!text || text.trim().length < 50) {
+                return res.status(400).json({ error: 'Could not extract enough text from the file. Please try a different file.' });
+            }
+
+            // Generate questions using Gemini
+            const questions = await aiService.generateQuestionsFromText(text, instructions);
+
+            // Cleanup temp file
+            try { fs.unlinkSync(filePath); } catch (e) { /* ignore cleanup errors */ }
+
+            res.json({ questions, total: questions.length });
+        } catch (error: any) {
+            // Cleanup temp file on error too
+            if (filePath) { try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ } }
+            console.error('[TeacherController] extractQuestionsFromFile error:', error);
+            res.status(500).json({ error: error.message || 'AI extraction failed' });
+        }
+    }
+
+    async bulkSaveQuestions(req: AuthRequest, res: Response) {
+        try {
+            const { questions, subject_id } = req.body;
+            if (!questions || !Array.isArray(questions) || questions.length === 0) {
+                return res.status(400).json({ error: 'No questions provided' });
+            }
+
+            const savedIds: number[] = [];
+            for (const q of questions) {
+                const saved = await questionBankService.createQuestion({
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    subject_id: parseInt(subject_id) || 0,
+                    topic: q.topic || undefined,
+                    difficulty_level: q.difficulty_level || 'medium',
+                    marks: Number(q.marks) || 1,
+                    options: q.options && q.options.length > 0 ? JSON.stringify(q.options) : undefined,
+                    correct_answer: q.correct_answer || undefined,
+                    teacher_id: req.user!.id,
+                });
+                if (saved && (saved as any).id) savedIds.push((saved as any).id);
+            }
+
+            res.status(201).json({
+                success: true,
+                savedCount: savedIds.length,
+                ids: savedIds,
+                message: `${savedIds.length} question(s) saved to Question Bank`
+            });
+        } catch (error: any) {
+            console.error('[TeacherController] bulkSaveQuestions error:', error);
+            res.status(500).json({ error: error.message || 'Failed to save questions' });
         }
     }
 }

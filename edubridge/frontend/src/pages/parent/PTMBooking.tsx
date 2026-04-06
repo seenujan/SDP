@@ -16,7 +16,11 @@ interface PTMRequest {
     meeting_time: string;
     notes?: string;
     status: 'pending' | 'approved' | 'rejected' | 'completed' | 'reschedule_requested';
-    teacher_remarks?: string;
+    teacher_remarks?: string;   // legacy column
+    teacher_feedback?: string;  // from ptm_feedback table
+    parent_feedback?: string;   // from ptm_feedback table
+    teacher_feedback_rating?: number;
+    parent_feedback_rating?: number;
     rejection_reason?: string;
     alternative_date?: string;
     alternative_time?: string;
@@ -53,6 +57,14 @@ const ParentPTMBooking = () => {
         alternative_date: '',
         alternative_time: ''
     });
+
+    // Feedback Modal State
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [feedbackRequest, setFeedbackRequest] = useState<PTMRequest | null>(null);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [feedbackRating, setFeedbackRating] = useState(0);
+    const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+    const [feedbackSuccess, setFeedbackSuccess] = useState<number | null>(null); // stores ptm id after success
 
     useEffect(() => {
         fetchInitialData();
@@ -188,6 +200,24 @@ const ParentPTMBooking = () => {
         submitAction(selectedRequest.id, actionData);
     };
 
+    const handleFeedbackSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!feedbackRequest || !feedbackText.trim()) return;
+        setFeedbackSubmitting(true);
+        try {
+            await parentAPI.submitPTMFeedback(feedbackRequest.id, feedbackText.trim(), feedbackRating || undefined);
+            setFeedbackSuccess(feedbackRequest.id);
+            setShowFeedbackModal(false);
+            setFeedbackRequest(null);
+            setFeedbackText('');
+            setFeedbackRating(0);
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Failed to submit feedback');
+        } finally {
+            setFeedbackSubmitting(false);
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         const badges = {
             pending: 'bg-yellow-100 text-yellow-800',
@@ -279,6 +309,22 @@ const ParentPTMBooking = () => {
                                         </span>
                                     </div>
 
+                                    {/* When parent proposed alt to a teacher-initiated meeting, show waiting info */}
+                                    {request.status === 'reschedule_requested' && request.initiator === 'teacher' && (
+                                        <div className="bg-blue-50 p-3 rounded-lg mt-2">
+                                            <div className="flex items-start space-x-2 text-blue-800">
+                                                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-medium text-sm">⏳ Awaiting Teacher's Response</p>
+                                                    <p className="text-xs mt-1">
+                                                        Your proposed alternative ({request.alternative_date ? new Date(request.alternative_date).toLocaleDateString() : '—'} at {request.alternative_time}) is being reviewed by the teacher.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Parent responds when teacher rescheduled a parent-initiated meeting */}
                                     {request.status === 'reschedule_requested' && request.initiator === 'parent' && (
                                         <div className="bg-blue-50 p-3 rounded-lg mt-2">
                                             <div className="flex items-start space-x-2 text-blue-800 mb-2">
@@ -317,14 +363,33 @@ const ParentPTMBooking = () => {
                                     </div>
                                 )}
 
-                                {request.teacher_remarks && request.status !== 'pending' && (
-                                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                                        <p className="text-sm text-gray-600">
-                                            <span className="font-medium">Teacher Remarks:</span> {request.teacher_remarks}
-                                        </p>
+                                {/* Teacher feedback from ptm_feedback table */}
+                                {request.teacher_feedback && request.status !== 'pending' && (
+                                    <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Teacher's Feedback</p>
+                                        {request.teacher_feedback_rating && (
+                                            <p className="text-yellow-500 text-sm mb-1">
+                                                {'★'.repeat(request.teacher_feedback_rating)}{'☆'.repeat(5 - request.teacher_feedback_rating)}
+                                            </p>
+                                        )}
+                                        <p className="text-sm text-blue-800">{request.teacher_feedback}</p>
                                     </div>
                                 )}
 
+                                {/* Your own submitted feedback */}
+                                {request.parent_feedback && (
+                                    <div className="mb-3 p-3 bg-green-50 rounded-lg">
+                                        <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Your Feedback</p>
+                                        {request.parent_feedback_rating && (
+                                            <p className="text-yellow-500 text-sm mb-1">
+                                                {'★'.repeat(request.parent_feedback_rating)}{'☆'.repeat(5 - request.parent_feedback_rating)}
+                                            </p>
+                                        )}
+                                        <p className="text-sm text-green-800">{request.parent_feedback}</p>
+                                    </div>
+                                )}
+
+                                {/* Teacher-initiated pending: Accept / Reject */}
                                 {request.status === 'pending' && request.initiator === 'teacher' && (
                                     <div className="flex space-x-3 mt-4">
                                         <button
@@ -343,12 +408,105 @@ const ParentPTMBooking = () => {
                                         </button>
                                     </div>
                                 )}
+
+                                {/* Completed: Leave Feedback */}
+                                {request.status === 'completed' && (
+                                    <div className="mt-4">
+                                        {(feedbackSuccess === request.id || request.parent_feedback) ? (
+                                            <div className="flex items-center justify-center space-x-2 p-2 bg-green-50 rounded-lg text-green-700 text-sm font-medium">
+                                                <CheckCircle size={16} />
+                                                <span>Feedback submitted! Thank you.</span>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    setFeedbackRequest(request);
+                                                    setFeedbackText('');
+                                                    setFeedbackRating(0);
+                                                    setShowFeedbackModal(true);
+                                                }}
+                                                className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
+                                            >
+                                                <span>⭐ Leave Feedback</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Initiate Modal */}
+                {/* Feedback Modal */}
+                {showFeedbackModal && feedbackRequest && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-1">Share Your Feedback</h2>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Meeting with {feedbackRequest.teacher_name} for {feedbackRequest.student_name}
+                            </p>
+                            <form onSubmit={handleFeedbackSubmit} className="space-y-5">
+                                {/* Star Rating */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Rating (optional)</label>
+                                    <div className="flex space-x-2">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                onClick={() => setFeedbackRating(star === feedbackRating ? 0 : star)}
+                                                className={`text-3xl transition-transform hover:scale-110 focus:outline-none ${
+                                                    star <= feedbackRating ? 'text-yellow-400' : 'text-gray-300'
+                                                }`}
+                                            >
+                                                ★
+                                            </button>
+                                        ))}
+                                        {feedbackRating > 0 && (
+                                            <span className="ml-2 self-center text-sm text-gray-500">
+                                                {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][feedbackRating]}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Feedback Text */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Your Feedback *</label>
+                                    <textarea
+                                        rows={5}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none resize-none"
+                                        value={feedbackText}
+                                        onChange={(e) => setFeedbackText(e.target.value)}
+                                        placeholder="How was the meeting? Was the discussion helpful? Any suggestions..."
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">{feedbackText.length}/500 characters</p>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowFeedbackModal(false); setFeedbackRequest(null); }}
+                                        className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                        disabled={feedbackSubmitting}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={feedbackSubmitting || !feedbackText.trim()}
+                                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Book Meeting Modal */}
                 {showInitiateModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">

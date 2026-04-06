@@ -2,15 +2,41 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Bell, Check, ExternalLink, GraduationCap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { notificationAPI } from '../../services/api';
+import { notificationAPI, profileAPI } from '../../services/api';
 
 const Header = () => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+
+    // Fetch fresh profile photo from API on mount
+    useEffect(() => {
+        const fetchProfilePhoto = async () => {
+            try {
+                const res = await profileAPI.getProfile();
+                const photo = res.data?.profile_photo || null;
+                setProfilePhoto(photo);
+                // Also sync into AuthContext so it persists on next load
+                if (photo && photo !== user?.profile_photo) {
+                    updateUser({ profile_photo: photo });
+                }
+            } catch (err) {
+                // silently ignore — fall back to initials
+            }
+        };
+        fetchProfilePhoto();
+    }, []);
+
+    // Keep local profilePhoto in sync if AuthContext user changes (e.g., after upload on Profile page)
+    useEffect(() => {
+        if (user?.profile_photo) {
+            setProfilePhoto(user.profile_photo);
+        }
+    }, [user?.profile_photo]);
 
     useEffect(() => {
         fetchNotifications();
@@ -198,15 +224,24 @@ const Header = () => {
                 </div>
 
                 {/* User Profile */}
-                <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">
-                            {user?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() ||
-                                user?.email?.substring(0, 2).toUpperCase()}
-                        </span>
+                <Link to="/profile" className="flex items-center space-x-3 group">
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ring-2 ring-transparent group-hover:ring-primary-300 transition-all duration-200 bg-primary-600 flex-shrink-0">
+                        {profilePhoto ? (
+                            <img
+                                src={`/${profilePhoto}`}
+                                alt={user?.full_name || 'Profile'}
+                                className="w-full h-full object-cover"
+                                onError={() => setProfilePhoto(null)}
+                            />
+                        ) : (
+                            <span className="text-white font-semibold text-sm select-none">
+                                {user?.full_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() ||
+                                    user?.email?.substring(0, 2).toUpperCase()}
+                            </span>
+                        )}
                     </div>
                     <div className="text-right">
-                        <p className="text-sm font-semibold text-gray-800">
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">
                             {user?.full_name || user?.email}
                         </p>
                         <p className="text-xs text-gray-500 capitalize">
@@ -214,7 +249,7 @@ const Header = () => {
                             {user?.subject && ` - ${user.subject}`}
                         </p>
                     </div>
-                </div>
+                </Link>
             </div>
         </header>
     );
