@@ -344,7 +344,7 @@ export class PTMBookingService {
     }
 
     // Mark PTM as completed and save teacher feedback to ptm_feedback table
-    async completePTM(bookingId: number, teacherRemarks?: string): Promise<PTMMeeting> {
+    async completePTM(bookingId: number, teacherRemarks?: string, rating?: number): Promise<PTMMeeting> {
         // Update status only (teacher_remarks column kept for legacy, but feedback goes to ptm_feedback)
         await pool.query(
             'UPDATE ptm_meetings SET status = ? WHERE id = ?',
@@ -354,20 +354,21 @@ export class PTMBookingService {
         const booking = await this.getPTMBookingById(bookingId);
 
         // Save teacher remarks as feedback in ptm_feedback table
-        if (teacherRemarks && teacherRemarks.trim()) {
+        if ((teacherRemarks && teacherRemarks.trim()) || rating) {
+            const feedbackText = teacherRemarks?.trim() || '';
             const [existing] = await pool.query<RowDataPacket[]>(
                 'SELECT id FROM ptm_feedback WHERE ptm_meeting_id = ? AND feedback_from = ?',
                 [bookingId, 'teacher']
             );
             if (existing.length > 0) {
                 await pool.query(
-                    'UPDATE ptm_feedback SET feedback = ?, created_at = CURRENT_TIMESTAMP WHERE ptm_meeting_id = ? AND feedback_from = ?',
-                    [teacherRemarks.trim(), bookingId, 'teacher']
+                    'UPDATE ptm_feedback SET feedback = ?, rating = ?, created_at = CURRENT_TIMESTAMP WHERE ptm_meeting_id = ? AND feedback_from = ?',
+                    [feedbackText, rating || null, bookingId, 'teacher']
                 );
             } else {
                 await pool.query<ResultSetHeader>(
-                    'INSERT INTO ptm_feedback (ptm_meeting_id, feedback_from, feedback) VALUES (?, ?, ?)',
-                    [bookingId, 'teacher', teacherRemarks.trim()]
+                    'INSERT INTO ptm_feedback (ptm_meeting_id, feedback_from, feedback, rating) VALUES (?, ?, ?, ?)',
+                    [bookingId, 'teacher', feedbackText, rating || null]
                 );
             }
         }

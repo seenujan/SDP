@@ -52,6 +52,7 @@ const PTMBooking = () => {
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [completeRequest, setCompleteRequest] = useState<PTMRequest | null>(null);
     const [completeRemarks, setCompleteRemarks] = useState('');
+    const [completeRating, setCompleteRating] = useState(0);
 
     // Initiate Modal State
     const [showInitiateModal, setShowInitiateModal] = useState(false);
@@ -145,11 +146,13 @@ const PTMBooking = () => {
         try {
             await teacherAPI.updatePTMStatus(completeRequest.id, {
                 status: 'completed',
-                teacher_remarks: completeRemarks
+                teacher_remarks: completeRemarks,
+                rating: completeRating || undefined
             });
             setShowCompleteModal(false);
             setCompleteRequest(null);
             setCompleteRemarks('');
+            setCompleteRating(0);
             fetchRequests();
         } catch (error) {
             console.error('Failed to complete PTM:', error);
@@ -379,6 +382,7 @@ const PTMBooking = () => {
                                                 if (!canComplete) return;
                                                 setCompleteRequest(request);
                                                 setCompleteRemarks('');
+                                                setCompleteRating(0);
                                                 setShowCompleteModal(true);
                                             }}
                                             disabled={!canComplete}
@@ -537,6 +541,28 @@ const PTMBooking = () => {
                         </p>
                         <form onSubmit={handleCompleteSubmit} className="space-y-4">
                             <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Rating (Optional)</label>
+                                <div className="flex items-center space-x-2 mb-4">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setCompleteRating(star === completeRating ? 0 : star)}
+                                            className={`text-2xl focus:outline-none transition-colors ${
+                                                star <= completeRating ? 'text-yellow-400' : 'text-gray-300'
+                                            } hover:text-yellow-400`}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                    {completeRating > 0 && (
+                                        <span className="ml-3 text-sm font-medium text-gray-600">
+                                            {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][completeRating]}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Teacher Feedback (Optional)</label>
                                 <textarea
                                     rows={4}
@@ -549,7 +575,7 @@ const PTMBooking = () => {
                             <div className="flex justify-end space-x-3 mt-6">
                                 <button
                                     type="button"
-                                    onClick={() => { setShowCompleteModal(false); setCompleteRequest(null); }}
+                                    onClick={() => { setShowCompleteModal(false); setCompleteRequest(null); setCompleteRating(0); }}
                                     className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
                                 >
                                     Cancel

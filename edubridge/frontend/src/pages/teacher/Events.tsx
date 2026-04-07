@@ -87,7 +87,7 @@ const Events = () => {
             <div className="animate-fade-in">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">My Events</h1>
+                        <h1 className="text-3xl font-bold text-gray-800">Events</h1>
                         <p className="text-gray-600 mt-1">Manage school events</p>
                     </div>
                     <button

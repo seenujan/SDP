@@ -4,7 +4,7 @@ import DataTable from '../../components/common/DataTable';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 import { adminAPI } from '../../services/api';
-import { Plus, X, Edit2, Ban, CheckCircle } from 'lucide-react';
+import { Plus, X, Edit2, Ban, CheckCircle, Clock } from 'lucide-react';
 
 interface User {
     id: number;
@@ -260,8 +260,12 @@ const UserManagement = () => {
             key: 'active',
             header: 'Status',
             render: (val: number) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {val === 1 ? 'Active' : 'Inactive'}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    val === 1 ? 'bg-green-100 text-green-800' :
+                    val === 2 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                }`}>
+                    {val === 1 ? 'Active' : val === 2 ? 'Pending' : 'Inactive'}
                 </span>
             )
         },
@@ -282,13 +286,23 @@ const UserManagement = () => {
                     >
                         <Edit2 size={16} />
                     </button>
-                    <button
-                        onClick={() => onToggleStatusClick(row)}
-                        className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
-                        title={row.active === 1 ? "Deactivate User" : "Activate User"}
-                    >
-                        {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
-                    </button>
+                    {row.active === 2 ? (
+                        <button
+                            disabled
+                            className="p-1 rounded text-yellow-400 cursor-not-allowed opacity-60"
+                            title="Cannot activate — user has not verified their email yet"
+                        >
+                            <Clock size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onToggleStatusClick(row)}
+                            className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                            title={row.active === 1 ? "Deactivate User" : "Activate User"}
+                        >
+                            {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -305,8 +319,12 @@ const UserManagement = () => {
             key: 'active',
             header: 'Status',
             render: (val: number) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {val === 1 ? 'Active' : 'Inactive'}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    val === 1 ? 'bg-green-100 text-green-800' :
+                    val === 2 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                }`}>
+                    {val === 1 ? 'Active' : val === 2 ? 'Pending' : 'Inactive'}
                 </span>
             )
         },
@@ -316,13 +334,19 @@ const UserManagement = () => {
             render: (_: any, row: User) => (
                 <div className="flex space-x-2">
                     <button onClick={() => openEditModal(row.user_id!)} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={16} /></button>
-                    <button
-                        onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
-                        className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
-                        title={row.active === 1 ? "Deactivate" : "Activate"}
-                    >
-                        {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
-                    </button>
+                    {row.active === 2 ? (
+                        <button disabled className="p-1 rounded text-yellow-400 cursor-not-allowed opacity-60" title="Cannot activate — user has not verified their email yet">
+                            <Clock size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
+                            className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                            title={row.active === 1 ? "Deactivate" : "Activate"}
+                        >
+                            {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -338,8 +362,12 @@ const UserManagement = () => {
             key: 'active',
             header: 'Status',
             render: (val: number) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {val === 1 ? 'Active' : 'Inactive'}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    val === 1 ? 'bg-green-100 text-green-800' :
+                    val === 2 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                }`}>
+                    {val === 1 ? 'Active' : val === 2 ? 'Pending' : 'Inactive'}
                 </span>
             )
         },
@@ -349,13 +377,19 @@ const UserManagement = () => {
             render: (_: any, row: User) => (
                 <div className="flex space-x-2">
                     <button onClick={() => openEditModal(row.user_id!)} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={16} /></button>
-                    <button
-                        onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
-                        className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
-                        title={row.active === 1 ? "Deactivate" : "Activate"}
-                    >
-                        {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
-                    </button>
+                    {row.active === 2 ? (
+                        <button disabled className="p-1 rounded text-yellow-400 cursor-not-allowed opacity-60" title="Cannot activate — user has not verified their email yet">
+                            <Clock size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
+                            className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                            title={row.active === 1 ? "Deactivate" : "Activate"}
+                        >
+                            {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -371,8 +405,12 @@ const UserManagement = () => {
             key: 'active',
             header: 'Status',
             render: (val: number) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${val === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {val === 1 ? 'Active' : 'Inactive'}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    val === 1 ? 'bg-green-100 text-green-800' :
+                    val === 2 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                }`}>
+                    {val === 1 ? 'Active' : val === 2 ? 'Pending' : 'Inactive'}
                 </span>
             )
         },
@@ -382,13 +420,19 @@ const UserManagement = () => {
             render: (_: any, row: User) => (
                 <div className="flex space-x-2">
                     <button onClick={() => openEditModal(row.user_id!)} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={16} /></button>
-                    <button
-                        onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
-                        className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
-                        title={row.active === 1 ? "Deactivate" : "Activate"}
-                    >
-                        {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
-                    </button>
+                    {row.active === 2 ? (
+                        <button disabled className="p-1 rounded text-yellow-400 cursor-not-allowed opacity-60" title="Cannot activate — user has not verified their email yet">
+                            <Clock size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onToggleStatusClick({ ...row, id: row.user_id! })}
+                            className={`p-1 rounded ${row.active === 1 ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                            title={row.active === 1 ? "Deactivate" : "Activate"}
+                        >
+                            {row.active === 1 ? <Ban size={16} /> : <CheckCircle size={16} />}
+                        </button>
+                    )}
                 </div>
             ),
         },

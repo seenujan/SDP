@@ -144,7 +144,7 @@ const Profile = () => {
 
     return (
         <DashboardLayout>
-            <div className="animate-fade-in max-w-4xl">
+            <div className="animate-fade-in max-w-6xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
                     <p className="text-gray-600 mt-1">Manage your account information and profile photo</p>
@@ -164,193 +164,197 @@ const Profile = () => {
                     </div>
                 )}
 
-                {/* Profile Card — Hero section with avatar */}
-                <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-8 mb-6 text-white relative overflow-hidden">
-                    {/* Decorative blobs */}
-                    <div className="absolute -top-10 -right-10 w-48 h-48 bg-white opacity-5 rounded-full" />
-                    <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-white opacity-5 rounded-full" />
-
-                    <div className="flex items-center space-x-6 relative z-10">
-                        {/* Avatar with click-to-upload */}
-                        <div className="relative group">
-                            <div
-                                onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
-                                className={`w-28 h-28 rounded-full border-4 border-white border-opacity-60 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                                    uploadingPhoto ? 'opacity-70 cursor-not-allowed' : 'hover:border-opacity-100'
-                                }`}
-                                style={{ background: 'rgba(255,255,255,0.15)' }}
-                                title="Click to change profile photo"
-                            >
-                                {photoSrc ? (
-                                    <img
-                                        src={photoSrc}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <User size={48} className="text-white opacity-80" />
-                                )}
-
-                                {/* Overlay on hover */}
-                                {!uploadingPhoto && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full">
-                                        <Camera size={22} className="text-white mb-1" />
-                                        <span className="text-white text-xs font-medium">Change</span>
-                                    </div>
-                                )}
-
-                                {/* Loading spinner */}
-                                {uploadingPhoto && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
-                                        <Loader2 size={24} className="text-white animate-spin" />
-                                    </div>
-                                )}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+                    {/* LEFT COLUMN: HERO AVATAR */}
+                    <div className="xl:col-span-1">
+                        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative pb-8">
+                            <div className="h-32 bg-gradient-to-br from-primary-600 to-primary-800 relative overflow-hidden">
+                                <div className="absolute -top-10 -right-10 w-48 h-48 bg-white opacity-10 rounded-full" />
+                                <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-white opacity-10 rounded-full" />
                             </div>
+                            
+                            <div className="px-8 relative text-center">
+                                {/* Avatar */}
+                                <div className="relative group inline-block -mt-16 mb-4">
+                                    <div
+                                        onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
+                                        className={`w-32 h-32 mx-auto rounded-full border-4 border-white shadow-md overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 bg-gray-50 ${
+                                            uploadingPhoto ? 'opacity-70 cursor-not-allowed' : 'hover:ring-4 hover:ring-primary-100 hover:border-gray-50'
+                                        }`}
+                                        title="Click to change profile photo"
+                                    >
+                                        {photoSrc ? (
+                                            <img
+                                                src={photoSrc}
+                                                alt="Profile"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <User size={56} className="text-gray-300" />
+                                        )}
+                                        
+                                        {!uploadingPhoto && (
+                                            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full">
+                                                <Camera size={22} className="text-white mb-1" />
+                                                <span className="text-white text-xs font-medium">Change</span>
+                                            </div>
+                                        )}
 
-                            {/* Camera badge */}
-                            <button
-                                type="button"
-                                onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
-                                disabled={uploadingPhoto}
-                                className="absolute bottom-0 right-0 bg-white text-primary-600 rounded-full p-1.5 shadow-lg hover:bg-primary-50 transition-colors disabled:opacity-50"
-                                title="Upload photo"
-                            >
-                                <Camera size={14} />
-                            </button>
-                        </div>
+                                        {uploadingPhoto && (
+                                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
+                                                <Loader2 size={24} className="text-white animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
 
-                        {/* Hidden file input */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                            onChange={handlePhotoChange}
-                            className="hidden"
-                            id="profile-photo-input"
-                        />
+                                    <button
+                                        type="button"
+                                        onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
+                                        disabled={uploadingPhoto}
+                                        className="absolute bottom-1 right-1 bg-primary-600 text-white rounded-full p-2 shadow-lg hover:bg-primary-700 transition-colors disabled:opacity-50 border-2 border-white"
+                                        title="Upload photo"
+                                    >
+                                        <Camera size={14} />
+                                    </button>
+                                </div>
 
-                        <div>
-                            <h2 className="text-2xl font-bold">{profile?.full_name}</h2>
-                            <p className="text-white text-opacity-80 mt-0.5">{profile?.email}</p>
-                            <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${getRoleColor(profile?.role || '')}`}>
-                                {profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
-                            </span>
+                                {/* Hidden file input */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                                    onChange={handlePhotoChange}
+                                    className="hidden"
+                                    id="profile-photo-input"
+                                />
+
+                                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">{profile?.full_name}</h2>
+                                <p className="text-gray-500 font-medium mt-0.5">{profile?.email}</p>
+                                <div className="mt-4">
+                                    <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${getRoleColor(profile?.role || '')}`}>
+                                        {profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
+                                    </span>
+                                </div>
+                                <div className="mt-8 pt-6 border-t border-gray-100 text-sm text-gray-400 font-medium">
+                                    Click your photo to upload a new one.<br />JPEG, PNG, WebP (max 5MB).
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <p className="text-xs text-white text-opacity-60 mt-4 relative z-10">
-                        Click on your photo or the camera icon to upload a new profile picture (JPEG, PNG, WebP · max 5MB)
-                    </p>
-                </div>
-
-                {/* Profile Information Form */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                    <div className="flex items-center mb-6">
-                        <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center mr-3">
-                            <User className="text-primary-600" size={20} />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-800">Personal Information</h2>
-                            <p className="text-sm text-gray-500">Update your personal details below</p>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleProfileUpdate}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                                <input
-                                    type="text"
-                                    value={profileForm.fullName}
-                                    onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                    required
-                                />
+                    {/* RIGHT COLUMN: INFORMATION FORM */}
+                    <div className="xl:col-span-2">
+                        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center mb-8">
+                                <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center mr-4 shadow-sm border border-primary-100">
+                                    <User className="text-primary-600" size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800">Personal Information</h2>
+                                    <p className="text-sm text-gray-500 font-medium">Update your details</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={profileForm.email}
-                                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                    required
-                                />
-                            </div>
-
-                            {(profile?.role === 'parent' || profile?.role === 'teacher') && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={profileForm.phone}
-                                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                        placeholder="+1 (555) 000-0000"
-                                    />
-                                </div>
-                            )}
-
-                            {profile?.role === 'teacher' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
-                                    <input
-                                        type="text"
-                                        value={profile?.subject || 'Not Assigned'}
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
-                                        disabled
-                                    />
-                                </div>
-                            )}
-
-                            {profile?.role === 'student' && (
-                                <>
+                            <form onSubmit={handleProfileUpdate}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Date of Birth</label>
-                                        <input
-                                            type="date"
-                                            value={profileForm.dateOfBirth}
-                                            onChange={(e) => setProfileForm({ ...profileForm, dateOfBirth: e.target.value })}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Class</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                                         <input
                                             type="text"
-                                            value={`${profile.grade || ''} - ${profile.section || ''}`}
-                                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                                            value={profileForm.fullName}
+                                            onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                                        <input
+                                            type="email"
+                                            value={profileForm.email}
+                                            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                                            required
+                                        />
+                                    </div>
+
+                                    {(profile?.role === 'parent' || profile?.role === 'teacher') && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                value={profileForm.phone}
+                                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                                                placeholder="+1 (555) 000-0000"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {profile?.role === 'teacher' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
+                                            <input
+                                                type="text"
+                                                value={profile?.subject || 'Not Assigned'}
+                                                className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                disabled
+                                            />
+                                        </div>
+                                    )}
+
+                                    {profile?.role === 'student' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Date of Birth</label>
+                                                <input
+                                                    type="date"
+                                                    value={profileForm.dateOfBirth}
+                                                    onChange={(e) => setProfileForm({ ...profileForm, dateOfBirth: e.target.value })}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Class</label>
+                                                <input
+                                                    type="text"
+                                                    value={`${profile.grade || ''} - ${profile.section || ''}`}
+                                                    className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                    disabled
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                                        <input
+                                            type="text"
+                                            value={profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
+                                            className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
                                             disabled
                                         />
                                     </div>
-                                </>
-                            )}
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-                                <input
-                                    type="text"
-                                    value={profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
-                                    disabled
-                                />
-                            </div>
+                                <div className="flex justify-end pt-6 border-t border-gray-100">
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="flex items-center px-8 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-all font-semibold shadow-sm hover:shadow-md"
+                                    >
+                                        {saving ? (
+                                            <Loader2 size={20} className="mr-2 animate-spin" />
+                                        ) : (
+                                            <Save size={20} className="mr-2" />
+                                        )}
+                                        {saving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="flex items-center px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-all font-medium shadow-sm hover:shadow-md"
-                        >
-                            {saving ? (
-                                <Loader2 size={18} className="mr-2 animate-spin" />
-                            ) : (
-                                <Save size={18} className="mr-2" />
-                            )}
-                            {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </DashboardLayout>

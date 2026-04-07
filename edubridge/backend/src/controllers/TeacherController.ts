@@ -525,7 +525,7 @@ export class TeacherController {
 
     async updatePTMStatus(req: AuthRequest, res: Response) {
         try {
-            const { status, rejection_reason, alternative_date, alternative_time, teacher_remarks } = req.body;
+            const { status, rejection_reason, alternative_date, alternative_time, teacher_remarks, rating } = req.body;
             const bookingId = parseInt(req.params.id);
 
             let booking;
@@ -548,7 +548,7 @@ export class TeacherController {
                     booking = await ptmBookingService.rejectPTM(bookingId, rejection_reason || 'Rejected');
                 }
             } else if (status === 'completed') {
-                booking = await ptmBookingService.completePTM(bookingId, teacher_remarks);
+                booking = await ptmBookingService.completePTM(bookingId, teacher_remarks, rating);
             } else {
                 return res.status(400).json({ error: 'Invalid status' });
             }

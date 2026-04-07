@@ -23,7 +23,10 @@ export class UserService {
             // Active is 0 by default for admin-created (unless password provided, then maybe active?)
             // If password is NULL, active MUST be 0.
             let password = userData.password || null;
-            const active = userData.password ? 1 : 0; // If password provided (e.g. seed), assume active. If not, inactive.
+            // If password is provided (e.g. seed/legacy data), set active = 1.
+            // If no password (admin invite flow), set active = 2 (Pending email verification).
+            // Pending (2) → user clicks link & sets password → Inactive (0) → admin activates → Active (1)
+            const active = userData.password ? 1 : 2;
 
             if (password) {
                 validatePassword(password);
@@ -94,8 +97,8 @@ export class UserService {
                 );
             }
 
-            // Generate activation token if inactive
-            if (active === 0) {
+            // Generate activation token if pending (active = 2 = awaiting email verification)
+            if (active === 2) {
                 const token = crypto.randomBytes(32).toString('hex');
                 const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 

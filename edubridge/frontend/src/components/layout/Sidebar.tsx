@@ -47,6 +47,7 @@ const Sidebar = () => {
             case 'teacher':
                 return [
                     { icon: LayoutDashboard, label: 'Dashboard', path: '/teacher/dashboard' },
+                    { icon: Calendar, label: 'My Timetable', path: '/teacher/timetable' },
                     { icon: ClipboardList, label: 'Attendance', path: '/teacher/attendance' },
                     { icon: FileText, label: 'Assignments', path: '/teacher/assignments' },
                     { icon: BookOpen, label: 'Exams', path: '/teacher/exams' },

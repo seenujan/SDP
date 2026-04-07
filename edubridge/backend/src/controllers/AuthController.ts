@@ -13,14 +13,20 @@ export class AuthController {
 
             const result = await authService.login(email, password);
 
-            // Check active status (handle number 1/0, boolean true/false, and Buffer)
+            // Check active status (handle number 1/0/2, boolean, and Buffer)
             let isActive = result.user.active;
             if (Buffer.isBuffer(isActive)) {
-                isActive = isActive[0] === 1;
+                isActive = isActive[0];
             }
 
+            // active = 2 → Pending (email not verified yet)
+            if (isActive === 2) {
+                return res.status(403).json({ error: 'Your account is pending email verification. Please check your inbox and click the activation link.' });
+            }
+
+            // active = 0 → Deactivated by admin
             if (isActive !== 1 && isActive !== true) {
-                return res.status(403).json({ error: 'Your account is deactivated. Please contact administrator.' });
+                return res.status(403).json({ error: 'Your account has been deactivated. Please contact the administrator.' });
             }
 
             res.json(result);

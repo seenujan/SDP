@@ -121,7 +121,10 @@ export class AuthService {
             // Hash new password
             const hashedPassword = await this.hashPassword(password);
 
-            // Update user password and set active = 1
+            // Update user password and set active = 1 (Active).
+            // Email verification directly activates the account.
+            // Full lifecycle: Pending (2) → user clicks email link & sets password → Active (1)
+            // Inactive (0) is only used when admin manually deactivates an account.
             await connection.query(
                 'UPDATE users SET password = ?, active = 1 WHERE id = ?',
                 [hashedPassword, user_id]

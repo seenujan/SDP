@@ -14,13 +14,16 @@ export class AdminController {
     async toggleUserStatus(req: AuthRequest, res: Response) {
         try {
             const userId = parseInt(req.params.id);
-            // Default to true (activate) if not provided, or toggle existing? 
-            // Better to expect a target status or just toggle.
-            // Let's implement toggle.
-            // First get current status
             const user = await userService.getUserById(userId);
             if (!user) {
                 return res.status(404).json({ error: 'User not found' });
+            }
+
+            // Block activation of users who haven't verified their email yet (Pending = 2)
+            if (user.active === 2 || (Buffer.isBuffer(user.active) && user.active[0] === 2)) {
+                return res.status(400).json({
+                    error: 'Cannot activate this account. The user has not yet verified their email address. They must click the activation link sent to their email first.'
+                });
             }
 
             const newStatus = !user.active;

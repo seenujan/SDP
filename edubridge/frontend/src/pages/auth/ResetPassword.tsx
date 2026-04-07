@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
-import { GraduationCap, ArrowLeft, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Lock, CheckCircle, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
 import loginIllustration from '../../assets/images/login-illustration-new.png';
 
 const ResetPassword = () => {
@@ -19,6 +19,15 @@ const ResetPassword = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
+    const isLengthValid = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isPasswordValid = isLengthValid && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+    const isConfirmValid = confirmPassword.length > 0 && password === confirmPassword;
+    const isFormValid = isPasswordValid && isConfirmValid;
+
     useEffect(() => {
         if (!token) {
             setError('Invalid or missing reset token.');
@@ -29,13 +38,8 @@ const ResetPassword = () => {
         e.preventDefault();
         setError('');
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
-
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (!isFormValid) {
+            setError('Please ensure your password meets all requirements and matches.');
             return;
         }
 
@@ -107,6 +111,31 @@ const ResetPassword = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50">
+                            <h3 className="text-sm font-semibold text-blue-800 flex items-center">
+                                <ShieldCheck size={16} className="mr-2" />
+                                Password Requirements
+                            </h3>
+                            <ul className="space-y-2 mt-3">
+                                <li className={`flex items-center text-xs font-semibold ${isLengthValid ? 'text-green-600' : 'text-blue-700'}`}>
+                                    {isLengthValid ? <CheckCircle size={14} className="mr-2 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-1 mr-2.5 shrink-0"></div>}
+                                    8+ characters
+                                </li>
+                                <li className={`flex items-center text-xs font-semibold ${hasUpperCase && hasLowerCase ? 'text-green-600' : 'text-blue-700'}`}>
+                                    {hasUpperCase && hasLowerCase ? <CheckCircle size={14} className="mr-2 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-1 mr-2.5 shrink-0"></div>}
+                                    Uppercase & lowercase letters
+                                </li>
+                                <li className={`flex items-center text-xs font-semibold ${hasNumbers ? 'text-green-600' : 'text-blue-700'}`}>
+                                    {hasNumbers ? <CheckCircle size={14} className="mr-2 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-1 mr-2.5 shrink-0"></div>}
+                                    At least 1 number
+                                </li>
+                                <li className={`flex items-center text-xs font-semibold ${hasSpecialChar ? 'text-green-600' : 'text-blue-700'}`}>
+                                    {hasSpecialChar ? <CheckCircle size={14} className="mr-2 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-1 mr-2.5 shrink-0"></div>}
+                                    At least 1 special character (!@#$)
+                                </li>
+                            </ul>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 New Password
@@ -119,7 +148,13 @@ const ResetPassword = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-gray-50 text-gray-800 text-sm border-2 border-gray-100 rounded-xl pl-10 pr-12 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder-gray-400"
+                                    className={`w-full bg-gray-50 text-gray-800 text-sm border-2 rounded-xl pl-10 pr-12 py-3.5 focus:outline-none transition-all placeholder-gray-400 ${
+                                        password.length > 0
+                                            ? (isPasswordValid
+                                                ? 'border-green-500 focus:border-green-500 focus:ring-4 focus:ring-green-500/20'
+                                                : 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/20')
+                                            : 'border-gray-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
+                                    }`}
                                     placeholder="Enter new password"
                                     required
                                     disabled={!token}
@@ -132,6 +167,11 @@ const ResetPassword = () => {
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
+                            {password.length > 0 && !isPasswordValid && (
+                                <p className="text-red-500 text-xs mt-1.5 flex items-center font-medium">
+                                    <AlertCircle size={14} className="mr-1" /> Password does not meet all requirements
+                                </p>
+                            )}
                         </div>
 
                         <div>
@@ -146,7 +186,13 @@ const ResetPassword = () => {
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-gray-50 text-gray-800 text-sm border-2 border-gray-100 rounded-xl pl-10 pr-12 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder-gray-400"
+                                    className={`w-full bg-gray-50 text-gray-800 text-sm border-2 rounded-xl pl-10 pr-12 py-3.5 focus:outline-none transition-all placeholder-gray-400 ${
+                                        confirmPassword.length > 0 
+                                          ? (password === confirmPassword 
+                                                ? 'border-green-500 focus:border-green-500 focus:ring-4 focus:ring-green-500/20' 
+                                                : 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/20')
+                                          : 'border-gray-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
+                                    }`}
                                     placeholder="Confirm new password"
                                     required
                                     disabled={!token}
@@ -159,11 +205,21 @@ const ResetPassword = () => {
                                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
+                            {confirmPassword.length > 0 && password !== confirmPassword && (
+                                <p className="text-red-500 text-xs mt-1.5 flex items-center font-medium">
+                                    <AlertCircle size={14} className="mr-1" /> Passwords do not match
+                                </p>
+                            )}
+                            {confirmPassword.length > 0 && password === confirmPassword && (
+                                <p className="text-green-600 text-xs mt-1.5 flex items-center font-medium">
+                                    <CheckCircle size={14} className="mr-1" /> Passwords match
+                                </p>
+                            )}
                         </div>
 
                         <button
                             type="submit"
-                            disabled={loading || !token}
+                            disabled={loading || !token || !isFormValid}
                             className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:shadow-blue-700/40 transform transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
                         >
                             {loading ? (
