@@ -103,4 +103,8 @@ router.get('/timetable/teachers-dropdown', (req, res) => timetableController.get
 router.post('/ai/extract-questions', uploadAiFile, (req, res) => teacherController.extractQuestionsFromFile(req, res));
 router.post('/ai/bulk-save-questions', (req, res) => teacherController.bulkSaveQuestions(req, res));
 
+// Reports (Teacher-scoped)
+router.get('/reports/attendance', (req, res) => teacherController.getAttendanceReport(req, res));
+router.get('/reports/exams', (req, res) => teacherController.getExamReport(req, res));
+
 export default router;

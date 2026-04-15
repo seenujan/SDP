@@ -13,6 +13,7 @@ import { announcementService, eventService } from '../services/AnnouncementServi
 import { subjectService } from '../services/SubjectService';
 import { pool } from '../config/database';
 import { aiService } from '../services/AiService';
+import { reportService } from '../services/ReportService';
 import * as fs from 'fs';
 
 export class TeacherController {
@@ -733,6 +734,38 @@ export class TeacherController {
         } catch (error: any) {
             console.error('[TeacherController] bulkSaveQuestions error:', error);
             res.status(500).json({ error: error.message || 'Failed to save questions' });
+        }
+    }
+
+    // Reports - Teacher can only generate reports for their own classes
+    async getAttendanceReport(req: AuthRequest, res: Response) {
+        try {
+            const teacherUserId = req.user!.id;
+            const { classId, startDate, endDate } = req.query;
+            const report = await reportService.getAttendanceReportByTeacher(
+                teacherUserId,
+                classId ? parseInt(classId as string) : null,
+                startDate as string,
+                endDate as string
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getExamReport(req: AuthRequest, res: Response) {
+        try {
+            const teacherUserId = req.user!.id;
+            const { classId, examId } = req.query;
+            const report = await reportService.getExamReportByTeacher(
+                teacherUserId,
+                classId ? parseInt(classId as string) : null,
+                examId ? parseInt(examId as string) : null
+            );
+            res.json(report);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
         }
     }
 }

@@ -185,6 +185,12 @@ export const teacherAPI = {
         api.post('/teacher/ai/extract-questions', formData),
     bulkSaveQuestions: (questions: any[], subject_id: number) =>
         api.post('/teacher/ai/bulk-save-questions', { questions, subject_id }),
+
+    // Reports (Teacher-scoped — only their classes/exams)
+    getAttendanceReport: (classId?: string, startDate?: string, endDate?: string) =>
+        api.get('/teacher/reports/attendance', { params: { classId, startDate, endDate } }),
+    getExamReport: (classId?: string, examId?: string) =>
+        api.get('/teacher/reports/exams', { params: { classId, examId } }),
 };
 
 // Student API

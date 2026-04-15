@@ -58,6 +58,7 @@ const Sidebar = () => {
                     { icon: School, label: 'Events', path: '/teacher/events' },
                     { icon: Megaphone, label: 'Announcements', path: '/teacher/announcements' },
                     { icon: Clock, label: 'My Leaves', path: '/teacher/leave' },
+                    { icon: BarChart3, label: 'Reports', path: '/teacher/reports' },
                 ];
             case 'student':
                 return [

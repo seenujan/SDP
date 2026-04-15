@@ -40,6 +40,7 @@ import TeacherAnnouncements from './pages/teacher/Announcements';
 
 import TeacherEvents from './pages/teacher/Events';
 import LeaveManagement from './pages/teacher/LeaveManagement';
+import TeacherReports from './pages/teacher/Reports';
 
 // Student
 import StudentDashboard from './pages/student/Dashboard';
@@ -308,6 +309,14 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="teacher">
                                 <LeaveManagement />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/teacher/reports"
+                        element={
+                            <ProtectedRoute requiredRole="teacher">
+                                <TeacherReports />
                             </ProtectedRoute>
                         }
                     />
