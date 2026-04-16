@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { profileAPI } from '../services/api';
-import { Lock, Save, Loader2, CheckCircle, XCircle, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, Save, Loader2, CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
 
 const ChangePassword = () => {
     const [passwordForm, setPasswordForm] = useState({

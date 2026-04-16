@@ -100,6 +100,7 @@ export const adminAPI = {
     getProgressCardData: (studentId: number, term: string) =>
         api.get(`/admin/progress-card/${studentId}`, { params: { term } }),
     // Reports
+    getExams: () => api.get('/admin/exams'),
     getAttendanceReport: (classId: string, startDate: string, endDate: string) =>
         api.get('/admin/reports/attendance', { params: { classId, startDate, endDate } }),
     getExamReport: (grade: string, examId?: string) =>

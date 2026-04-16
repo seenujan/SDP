@@ -72,8 +72,8 @@ export class ReportService {
                     ans.attempt_id,
                     SUM(
                         CASE 
-                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option = qb.correct_answer THEN qb.marks
-                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) LIKE CONCAT('%', LOWER(qb.correct_answer), '%') THEN qb.marks
+                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
+                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer COLLATE utf8mb4_unicode_ci) LIKE CONCAT('%', LOWER(qb.correct_answer COLLATE utf8mb4_unicode_ci), '%') THEN qb.marks
                             ELSE 0 
                         END
                     ) as score
@@ -416,8 +416,8 @@ export class ReportService {
                     ans.attempt_id,
                     SUM(
                         CASE 
-                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option = qb.correct_answer THEN qb.marks
-                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer) LIKE CONCAT('%', LOWER(qb.correct_answer), '%') THEN qb.marks
+                            WHEN qb.question_type IN ('multiple_choice', 'true_false') AND ans.selected_option COLLATE utf8mb4_unicode_ci = qb.correct_answer COLLATE utf8mb4_unicode_ci THEN qb.marks
+                            WHEN qb.question_type = 'short_answer' AND ans.text_answer IS NOT NULL AND LOWER(ans.text_answer COLLATE utf8mb4_unicode_ci) LIKE CONCAT('%', LOWER(qb.correct_answer COLLATE utf8mb4_unicode_ci), '%') THEN qb.marks
                             ELSE 0 
                         END
                     ) as score

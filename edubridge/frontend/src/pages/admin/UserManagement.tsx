@@ -4,7 +4,7 @@ import DataTable from '../../components/common/DataTable';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 import { adminAPI } from '../../services/api';
-import { Plus, X, Edit2, Ban, CheckCircle, Clock } from 'lucide-react';
+import { Plus, X, Edit2, Ban, CheckCircle, Clock, Search, Filter } from 'lucide-react';
 
 interface User {
     id: number;
@@ -51,6 +51,8 @@ const UserManagement = () => {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [activeTab, setActiveTab] = useState<'all' | 'students' | 'teachers' | 'parents'>('all');
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 1 | 2 | 0>('all');
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -400,7 +402,7 @@ const UserManagement = () => {
         { key: 'full_name', header: 'Name' },
         { key: 'email', header: 'Email' },
         { key: 'phone', header: 'Phone', render: (val: string) => val || 'N/A' },
-        { key: 'annual_income', header: 'Annual Income', render: (val: number) => val ? `Rs. ${val.toLocaleString()}` : 'N/A' },
+        { key: 'annual_income', header: 'Annual Income', render: (val: any) => val ? `Rs. ${Number(val).toLocaleString()}` : 'N/A' },
         {
             key: 'active',
             header: 'Status',
@@ -439,12 +441,48 @@ const UserManagement = () => {
     ];
 
     const getTableData = () => {
+        let baseData: User[] = [];
+        let baseColumns = allUsersColumns;
+
         switch (activeTab) {
-            case 'students': return { columns: studentColumns, data: students };
-            case 'teachers': return { columns: teacherColumns, data: teachers };
-            case 'parents': return { columns: parentColumns, data: parents };
-            default: return { columns: allUsersColumns, data: users };
+            case 'students':
+                baseData = students;
+                baseColumns = studentColumns;
+                break;
+            case 'teachers':
+                baseData = teachers;
+                baseColumns = teacherColumns;
+                break;
+            case 'parents':
+                baseData = parents;
+                baseColumns = parentColumns;
+                break;
+            default:
+                baseData = users;
+                baseColumns = allUsersColumns;
+                break;
         }
+
+        const filteredData = baseData.filter(user => {
+            // Status Filter
+            if (statusFilter !== 'all' && user.active !== statusFilter) {
+                return false;
+            }
+
+            // Search Query Filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const name = (user.full_name || '').toLowerCase();
+                const email = (user.email || '').toLowerCase();
+                if (!name.includes(query) && !email.includes(query)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        return { columns: baseColumns, data: filteredData };
     };
 
     const { columns, data } = getTableData();
@@ -672,6 +710,33 @@ const UserManagement = () => {
                             </button>
                         ))}
                     </nav>
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row justify-between mb-4 space-y-3 md:space-y-0 md:space-x-4">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by name or email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-shadow"
+                        />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Filter className="text-gray-400" size={18} />
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value === 'all' ? 'all' : Number(e.target.value) as any)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value={1}>Active</option>
+                            <option value={2}>Pending</option>
+                            <option value={0}>Inactive</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Table */}

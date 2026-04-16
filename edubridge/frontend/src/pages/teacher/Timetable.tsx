@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { teacherAPI } from '../../services/api';
-import { Calendar, Clock, BookOpen, Users, AlertCircle } from 'lucide-react';
+import { Calendar, BookOpen, Users, AlertCircle } from 'lucide-react';
 
 interface TimetableEntry {
     id: number;

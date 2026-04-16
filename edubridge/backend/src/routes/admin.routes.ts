@@ -77,6 +77,7 @@ router.get('/progress-card/:studentId', (req, res) => adminController.getProgres
 
 // Reports
 // Reports
+router.get('/exams', (req, res) => adminController.getExams(req, res));
 router.get('/reports/attendance', (req, res) => adminController.getAttendanceReport(req, res));
 router.get('/reports/exams', (req, res) => adminController.getExamReport(req, res));
 router.get('/reports/certificates', (req, res) => adminController.getCertificateReport(req, res));

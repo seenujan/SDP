@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { dashboardService } from '../services/DashboardService';
+import { pool } from '../config/database';
 import { userService } from '../services/UserService';
 import { announcementService, eventService } from '../services/AnnouncementService';
 import { studentPortfolioService } from '../services/StudentPortfolioService';
@@ -365,15 +366,31 @@ export class AdminController {
         }
     }
 
+    async getExams(req: AuthRequest, res: Response) {
+        try {
+            const [rows] = await pool.query(`
+                SELECT e.*, c.grade, c.section, sub.subject_name 
+                FROM exams e
+                JOIN classes c ON e.class_id = c.id
+                JOIN subjects sub ON e.subject_id = sub.id
+                ORDER BY e.exam_date DESC
+            `);
+            res.json(rows);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async getExamReport(req: AuthRequest, res: Response) {
         try {
             const { grade, examId } = req.query;
             const report = await reportService.getExamReport(
-                grade as string,
+                grade ? (grade as string) : null,
                 examId ? parseInt(examId as string) : null
             );
             res.json(report);
         } catch (error: any) {
+            console.error('[AdminController] getExamReport error:', error);
             res.status(500).json({ error: error.message });
         }
     }
