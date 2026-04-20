@@ -129,7 +129,6 @@ export class AssignmentService {
 
     // Get submissions for an assignment
     async getSubmissionsForAssignment(assignmentId: number) {
-        console.log('Fetching submissions for assignment:', assignmentId);
         const [rows] = await pool.query(
             `SELECT 
         sub.*,
@@ -150,7 +149,6 @@ export class AssignmentService {
       ORDER BY sub.submitted_at DESC`,
             [assignmentId]
         );
-        console.log('Found submissions:', rows);
         return rows;
     }
 

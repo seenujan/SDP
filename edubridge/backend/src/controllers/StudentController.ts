@@ -299,25 +299,18 @@ export class StudentController {
     // GET /api/student/todos
     async getTodos(req: AuthRequest, res: Response) {
         try {
-            console.log('[getTodos] User ID:', req.user!.id);
-
             const [student]: any = await pool.query(
                 'SELECT id FROM students WHERE user_id = ?',
                 [req.user!.id]
             );
 
-            console.log('[getTodos] Student query result:', student);
-
             if (!student || student.length === 0) {
                 return res.status(404).json({ error: 'Student not found' });
             }
 
-            console.log('[getTodos] Student ID:', student[0].id);
-
             const todos = await TodoService.getStudentTodos(student[0].id);
             res.json(todos);
         } catch (error: any) {
-            console.error('[getTodos] Error:', error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -425,21 +418,16 @@ export class StudentController {
     // GET /api/student/portfolio
     async getPortfolio(req: AuthRequest, res: Response) {
         try {
-            console.log('[getPortfolio] User ID:', req.user!.id);
             const [student]: any = await pool.query(
                 'SELECT id FROM students WHERE user_id = ?',
                 [req.user!.id]
             );
 
-            console.log('[getPortfolio] Student found:', student);
-
             if (!student || student.length === 0) {
                 return res.status(404).json({ error: 'Student profile not found' });
             }
 
-            // Use the shared service logic
             const portfolio = await studentPortfolioService.getAllPortfolioEntries(student[0].id);
-            console.log('[getPortfolio] Entries found:', portfolio.length);
             res.json(portfolio);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

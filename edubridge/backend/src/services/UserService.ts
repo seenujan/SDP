@@ -281,11 +281,7 @@ export class UserService {
         }
     }
 
-    // Delete user (cascades to role-specific tables)
-    async deleteUser(id: number) {
-        await pool.query('DELETE FROM users WHERE id = ?', [id]);
-        return { success: true, message: 'User deleted successfully' };
-    }
+    
 
     // Get students with class info
     async getStudents() {

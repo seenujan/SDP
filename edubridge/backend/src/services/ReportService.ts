@@ -3,7 +3,6 @@ import { pool } from '../config/database';
 export class ReportService {
     // Get Attendance Report
     async getAttendanceReport(classId: number | null, startDate: string, endDate: string) {
-        console.log('[ReportService] Generating Attendance Report', { classId, startDate, endDate });
         let dateCondition = '';
         const params: any[] = [];
 
@@ -47,7 +46,6 @@ export class ReportService {
 
     // Get Exam Performance Report
     async getExamReport(grade: string | null, examId: number | null) {
-        console.log('[ReportService] Generating Exam Report', { grade, examId });
         let query = `
             SELECT 
                 e.id,
@@ -108,7 +106,6 @@ export class ReportService {
     }
     // Get Certificate Report
     async getCertificateReport(typeId?: number, startDate?: string, endDate?: string) {
-        console.log('[ReportService] Generating Certificate Report', { typeId, startDate, endDate });
         let query = `
             SELECT 
                 ci.certificate_number,
@@ -155,8 +152,6 @@ export class ReportService {
         grade?: string;
         search?: string;
     }) {
-        console.log('[ReportService] Fetching eligible students with rank', filters);
-
         let query = `
             WITH StudentMarks AS (
                 SELECT 
@@ -231,7 +226,6 @@ export class ReportService {
 
     // Get Scholarship Report
     async getScholarshipReport(startDate?: string, endDate?: string) {
-        console.log('[ReportService] Generating Scholarship Report', { startDate, endDate });
         let query = `
             SELECT 
                 sch.title,
@@ -260,7 +254,6 @@ export class ReportService {
 
     // Get User Report
     async getUserReport(role?: string, status?: string) {
-        console.log('[ReportService] Generating User Report', { role, status });
         let query = `
             SELECT 
                 u.id,
@@ -309,7 +302,6 @@ export class ReportService {
 
     // Get PTM Feedback Report
     async getPTMFeedbackReport(startDate?: string, endDate?: string) {
-        console.log('[ReportService] Generating PTM Feedback Report');
         let query = `
             SELECT 
                 pf.feedback_from,
@@ -343,7 +335,6 @@ export class ReportService {
 
     // Get Attendance Report scoped to a specific teacher's classes
     async getAttendanceReportByTeacher(teacherUserId: number, classId: number | null, startDate: string, endDate: string) {
-        console.log('[ReportService] Generating Teacher Attendance Report', { teacherUserId, classId, startDate, endDate });
         let dateCondition = '';
         const params: any[] = [];
 
@@ -391,7 +382,6 @@ export class ReportService {
 
     // Get Exam Report scoped to a specific teacher's exams
     async getExamReportByTeacher(teacherUserId: number, classId: number | null, examId: number | null) {
-        console.log('[ReportService] Generating Teacher Exam Report', { teacherUserId, classId, examId });
         let query = `
             SELECT 
                 e.id,

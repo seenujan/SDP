@@ -92,7 +92,6 @@ export class DashboardService {
 
   // Get teacher dashboard data
   async getTeacherDashboard(teacherId: number) {
-    console.log(`[DashboardService] Fetching dashboard for teacherId: ${teacherId}`);
 
     // 1. My Classes: Count distinct classes this teacher is assigned to
     const [classCount]: any = await pool.query(
@@ -214,7 +213,6 @@ export class DashboardService {
 
   // Get student dashboard data
   async getStudentDashboard(studentId: number) {
-    console.log('[DashboardService] getStudentDashboard called for studentId:', studentId);
     // Get grade first
     const [student]: any = await pool.query(`
         SELECT c.grade 
@@ -224,14 +222,10 @@ export class DashboardService {
     `, [studentId]);
 
     if (!student || student.length === 0) {
-      console.error('[DashboardService] Student record not found for ID:', studentId);
       throw new Error('Student record not found in DashboardService');
     }
 
     const grade = student[0].grade;
-    console.log('[DashboardService] Student Grade:', grade);
-
-    console.log('[DashboardService] Fetching pending assignments...');
     const [pendingAssignments] = await pool.query(`
           SELECT a.*, sub.subject_name as subject
           FROM assignments a
@@ -295,7 +289,6 @@ export class DashboardService {
 
 
     // Get upcoming exams
-    console.log('[DashboardService] Fetching upcoming exams...');
     const [upcomingExamsResult] = await pool.query(`
           SELECT e.*, sub.subject_name as subject
           FROM exams e
@@ -322,10 +315,7 @@ export class DashboardService {
     */
     // I will stick to class_id for consistency.
 
-    console.log('[DashboardService] Upcoming exams count:', Array.isArray(upcomingExamsResult) ? upcomingExamsResult.length : 'N/A');
-
     // Get attendance percentage
-    console.log('[DashboardService] Fetching attendance stats...');
     const [attendanceStats]: any = await pool.query(`
           SELECT 
             COUNT(*) as total,
@@ -337,7 +327,6 @@ export class DashboardService {
     const attendance = attendanceStats[0].total > 0
       ? Math.round((attendanceStats[0].present / attendanceStats[0].total) * 100)
       : 0;
-    console.log('[DashboardService] Attendance calculated:', attendance);
 
     // Get today's schedule
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

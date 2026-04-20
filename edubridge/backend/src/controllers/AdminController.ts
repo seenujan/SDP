@@ -291,12 +291,6 @@ export class AdminController {
     // Create certificate
     async createCertificate(req: AuthRequest, res: Response) {
         try {
-            console.log('Create certificate request:', {
-                body: req.body,
-                userId: req.user?.id,
-                userEmail: req.user?.email
-            });
-
             if (!req.user?.id) {
                 return res.status(401).json({ error: 'User not authenticated' });
             }
@@ -309,10 +303,8 @@ export class AdminController {
                 issuedBy: req.user.id
             });
 
-            console.log('Certificate created successfully:', certificate);
             res.status(201).json(certificate);
         } catch (error: any) {
-            console.error('Failed to create certificate:', error);
             res.status(400).json({ error: error.message });
         }
     }
@@ -390,7 +382,6 @@ export class AdminController {
             );
             res.json(report);
         } catch (error: any) {
-            console.error('[AdminController] getExamReport error:', error);
             res.status(500).json({ error: error.message });
         }
     }

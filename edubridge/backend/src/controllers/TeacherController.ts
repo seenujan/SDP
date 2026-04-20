@@ -41,30 +41,16 @@ export class TeacherController {
     async getAllSubjects(req: AuthRequest, res: Response) {
         try {
             const userId = req.user?.id;
-            
-            // Try very simple query first to see if it works
-            const [allSubjectsRows]: any = await pool.query(`SELECT * FROM subjects`);
-            const allSubjects = allSubjectsRows as any[];
-            console.log('ALL Subjects in DB:', allSubjects);
 
-            // Filtering query
             const [subjectsRows]: any = await pool.query(`
                 SELECT DISTINCT s.* 
                 FROM subjects s
                 JOIN timetable t ON t.subject_id = s.id
                 WHERE t.teacher_id = ?
             `, [userId]);
-            const subjects = subjectsRows as any[];
-            
-            console.log('Filtered Subjects for', userId, ':', subjects);
 
-            // Log to a file we can read
-            const fs = require('fs');
-            fs.appendFileSync('subjects_debug.txt', `${new Date().toISOString()} - User ID: ${userId}, All: ${allSubjects.length}, Filtered: ${subjects.length}\n`);
-            
-            res.json(subjects.length > 0 ? subjects : allSubjects); // Fallback to ALL if filtered is empty for debugging
+            res.json(subjectsRows);
         } catch (error: any) {
-            console.error('Error in getAllSubjects:', error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -143,10 +129,6 @@ export class TeacherController {
             const { day } = req.query;
             const teacherId = req.user!.id;
 
-            console.log('=== getMyClasses ===');
-            console.log('Teacher ID:', teacherId);
-            console.log('Day filter:', day);
-
             let whereClause = 'WHERE t.teacher_id = ?';
             const params: any[] = [teacherId];
 
@@ -173,9 +155,6 @@ export class TeacherController {
                 ORDER BY c.grade, c.section
             `;
 
-            console.log('Query:', query.replace(/\s+/g, ' ').trim());
-            console.log('Params:', params);
-
             const [classes]: any = await pool.query(query, params);
 
             // Add student count for each class
@@ -192,13 +171,8 @@ export class TeacherController {
                 })
             );
 
-            console.log('Classes returned:', classesWithCount);
-            console.log('Count:', classesWithCount.length);
-
             res.json(classesWithCount);
         } catch (error: any) {
-            console.error('Error fetching classes:', error.message);
-            console.error('Stack:', error.stack);
             res.status(500).json({ error: 'Failed to fetch classes', details: error.message });
         }
     }
@@ -208,29 +182,22 @@ export class TeacherController {
         try {
             const { classId } = req.params;
 
-            console.log('=== getClassStudents ===');
-            console.log('Class ID:', classId);
-
-            // Get students by class_id
             const [students] = await pool.query(`
-            SELECT
-            s.id,
-                s.full_name,
-                s.roll_number,
-                s.class_id,
-                s.parent_id,
-                u.email
+                SELECT
+                    s.id,
+                    s.full_name,
+                    s.roll_number,
+                    s.class_id,
+                    s.parent_id,
+                    u.email
                 FROM students s
                 JOIN users u ON s.user_id = u.id
                 WHERE s.class_id = ?
                 ORDER BY s.roll_number, s.full_name
-                    `, [classId]);
-
-            console.log('Students found:', Array.isArray(students) ? students.length : 0);
+            `, [classId]);
 
             res.json(students);
         } catch (error: any) {
-            console.error('Error fetching students:', error.message);
             res.status(500).json({ error: error.message });
         }
     }
@@ -372,18 +339,14 @@ export class TeacherController {
         try {
             const { classId, term, subjectId } = req.params;
 
-            console.log(`Fetching term marks: classId = ${classId}, term = ${term}, subjectId = ${subjectId} `);
-
             const marks = await termMarksService.getTermMarksByClass(
                 parseInt(classId),
                 term,
                 parseInt(subjectId)
             );
 
-            console.log(`Found ${marks.length} term marks`);
             res.json(marks);
         } catch (error: any) {
-            console.error('Error in getTermMarks:', error);
             res.status(500).json({ error: error.message });
         }
     }
